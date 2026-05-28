@@ -13,6 +13,7 @@ public class PuzzleInteractable : MonoBehaviour, IInteractable
 
     public void Interact(Interactor interactor)
     {
+        PrototypeLogger.Info("Puzzle interact: " + puzzleTitle);
         if (memoryZone != null && memoryZone.IsRestored)
         {
             UIManager.Instance?.ShowDialogue("Noi nay da co mau sac tro lai roi.");
@@ -38,6 +39,11 @@ public class PuzzleInteractable : MonoBehaviour, IInteractable
 
     private string NormalizeAnswer(string value)
     {
-        return (value ?? string.Empty).Trim().ToLowerInvariant().Replace(" ", string.Empty);
+        return (value ?? string.Empty)
+            .Trim()
+            .ToLowerInvariant()
+            .Replace(" ", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(",", string.Empty);
     }
 }

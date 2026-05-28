@@ -22,12 +22,12 @@ public class GameProgressManager : MonoBehaviour
     [Header("Location States")]
     public LocationProgress[] locationStates =
     {
-        new LocationProgress { locationId = LocationId.NguyenHue, memoryFragmentName = "Nhip song tre" },
-        new LocationProgress { locationId = LocationId.BenThanh, memoryFragmentName = "Doi song thuong ngay" },
-        new LocationProgress { locationId = LocationId.DinhDocLap, memoryFragmentName = "Lich su" },
-        new LocationProgress { locationId = LocationId.NhaThoDucBa, memoryFragmentName = "Binh yen" },
-        new LocationProgress { locationId = LocationId.Bitexco, memoryFragmentName = "Chuyen minh" },
-        new LocationProgress { locationId = LocationId.BachDang, memoryFragmentName = "Dong chay thanh pho" }
+        new LocationProgress { locationId = LocationId.NguyenHue, memoryFragmentName = "Nhịp sống trẻ" },
+        new LocationProgress { locationId = LocationId.BenThanh, memoryFragmentName = "Đời sống thường ngày" },
+        new LocationProgress { locationId = LocationId.DinhDocLap, memoryFragmentName = "Lịch sử" },
+        new LocationProgress { locationId = LocationId.NhaThoDucBa, memoryFragmentName = "Bình yên" },
+        new LocationProgress { locationId = LocationId.Bitexco, memoryFragmentName = "Chuyển mình" },
+        new LocationProgress { locationId = LocationId.BachDang, memoryFragmentName = "Dòng chảy thành phố" }
     };
 
     private readonly List<string> collectedFragments = new List<string>();

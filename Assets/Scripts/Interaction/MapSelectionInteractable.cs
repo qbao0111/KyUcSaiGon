@@ -18,11 +18,13 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
     public void Interact(Interactor interactor)
     {
         GameProgressManager progress = GameProgressManager.Instance;
+        PrototypeLogger.Info("Route interact: " + displayName + " -> " + targetScene);
 
         if (isEndingRoute)
         {
             if (progress != null && progress.endingUnlocked)
             {
+                PrototypeLogger.Info("Loading ending route.");
                 SceneLoader.Load(SceneLoader.Ending);
             }
             else

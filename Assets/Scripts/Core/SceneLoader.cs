@@ -13,6 +13,7 @@ public static class SceneLoader
 
     public static void Load(string sceneName)
     {
+        PrototypeLogger.Info("Loading scene: " + sceneName);
         SceneManager.LoadScene(sceneName);
     }
 }

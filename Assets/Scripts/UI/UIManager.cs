@@ -23,7 +23,7 @@ public class UIManager : MonoBehaviour
     public Button quickChoiceButtonPrefab;
     public Text puzzleFeedbackText;
 
-    public bool IsBlockingPlayerInput => (dialogueBox != null && dialogueBox.activeSelf) || (puzzlePanel != null && puzzlePanel.activeSelf);
+    public bool IsBlockingPlayerInput => puzzlePanel != null && puzzlePanel.activeSelf;
 
     private PuzzleInteractable activePuzzle;
 
@@ -42,7 +42,9 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        HandlePuzzleKeyboardInput();
+
+        if (GameInput.CancelPressed)
         {
             HideDialogue();
             HidePuzzle();
@@ -69,8 +71,9 @@ public class UIManager : MonoBehaviour
 
         dialogueBox.SetActive(true);
         dialogueText.text = message;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        CancelInvoke(nameof(HideDialogue));
+        Invoke(nameof(HideDialogue), 4f);
+        PrototypeLogger.Info("Dialogue: " + message.Replace("\n", " "));
     }
 
     public void HideDialogue()
@@ -105,6 +108,7 @@ public class UIManager : MonoBehaviour
     public void ShowPuzzle(PuzzleInteractable puzzle)
     {
         activePuzzle = puzzle;
+        PrototypeLogger.Info("Open puzzle: " + puzzle.puzzleTitle + " | Correct answer: " + puzzle.correctAnswer);
 
         if (puzzlePanel == null)
         {
@@ -125,6 +129,7 @@ public class UIManager : MonoBehaviour
             foreach (string choice in puzzle.quickChoices)
             {
                 Button button = Instantiate(quickChoiceButtonPrefab, quickChoiceRoot);
+                button.gameObject.SetActive(true);
                 button.GetComponentInChildren<Text>().text = choice;
                 button.onClick.AddListener(() =>
                 {
@@ -142,6 +147,8 @@ public class UIManager : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        puzzleInput.Select();
+        puzzleInput.ActivateInputField();
     }
 
     public void SubmitPuzzle()
@@ -153,6 +160,7 @@ public class UIManager : MonoBehaviour
 
         bool solved = activePuzzle.TrySolve(puzzleInput.text);
         puzzleFeedbackText.text = solved ? "Correct. Memory restored." : "Not yet. Look for the hints.";
+        PrototypeLogger.Info("Puzzle submit: " + activePuzzle.puzzleTitle + " | Input: " + puzzleInput.text + " | Solved: " + solved);
 
         if (solved)
         {
@@ -181,6 +189,43 @@ public class UIManager : MonoBehaviour
         for (int i = quickChoiceRoot.childCount - 1; i >= 0; i--)
         {
             Destroy(quickChoiceRoot.GetChild(i).gameObject);
+        }
+    }
+
+    private void HandlePuzzleKeyboardInput()
+    {
+        if (puzzlePanel == null || !puzzlePanel.activeSelf || puzzleInput == null)
+        {
+            return;
+        }
+
+        if (GameInput.SubmitPressed)
+        {
+            SubmitPuzzle();
+            return;
+        }
+
+        if (GameInput.BackspacePressed && !string.IsNullOrEmpty(puzzleInput.text))
+        {
+            int splitIndex = puzzleInput.text.LastIndexOf('-');
+            puzzleInput.text = splitIndex >= 0 ? puzzleInput.text.Substring(0, splitIndex) : string.Empty;
+            puzzleInput.ActivateInputField();
+            return;
+        }
+
+        // Number/letter typing is handled by the InputField itself.
+        // Quick-choice buttons still append tokens when clicked.
+    }
+
+    private void AppendPuzzleToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(puzzleInput.text))
+        {
+            puzzleInput.text = token;
+        }
+        else
+        {
+            puzzleInput.text += "-" + token;
         }
     }
 

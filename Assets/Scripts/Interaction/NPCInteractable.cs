@@ -7,6 +7,7 @@ public class NPCInteractable : MonoBehaviour, IInteractable
 
     public void Interact(Interactor interactor)
     {
+        PrototypeLogger.Info("NPC interact: " + name);
         UIManager.Instance?.ShowDialogue(dialogue);
     }
 }

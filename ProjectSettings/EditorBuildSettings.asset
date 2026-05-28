@@ -6,8 +6,29 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Scenes/Scene_00_BusHub.unity
+    guid: 57e076f1c0a98bc49a0fd96d53182d23
+  - enabled: 1
+    path: Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity
+    guid: f5a3ea2e16f8e774d9c40aadbb327e08
+  - enabled: 1
+    path: Assets/Scenes/Scene_02_BenThanh.unity
+    guid: 9d991af85b03c6c46b6fcd091a1ae0a5
+  - enabled: 1
+    path: Assets/Scenes/Scene_03_DinhDocLap.unity
+    guid: 03ca9590a4633464fb7171dc8ef26352
+  - enabled: 1
+    path: Assets/Scenes/Scene_04_NhaThoDucBa.unity
+    guid: 3530895bf36f11940bbc626b220f7b93
+  - enabled: 1
+    path: Assets/Scenes/Scene_05_Bitexco.unity
+    guid: c21c43f1ea6dd42409608aa34b3c7058
+  - enabled: 1
+    path: Assets/Scenes/Scene_06_BachDang.unity
+    guid: 177a6d8031cea13438ed0dbc4b822969
+  - enabled: 1
+    path: Assets/Scenes/Scene_07_Ending.unity
+    guid: 7187697c41949744fbe154064686f03a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
