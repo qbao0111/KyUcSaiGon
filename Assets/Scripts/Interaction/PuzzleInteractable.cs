@@ -6,7 +6,11 @@ public class PuzzleInteractable : MonoBehaviour, IInteractable
     [TextArea] public string puzzleDescription = "Enter the correct answer.";
     public string correctAnswer = "123";
     public string inputHint = "Type answer";
+    [TextArea] public string wrongFeedback = "Not yet. Look for the hints.";
+    [TextArea] public string correctFeedback = "Correct. Memory restored.";
     public string[] quickChoices;
+    public bool useThreeValueStepper;
+    public string[] stepperLabels = { "Bass", "Mid", "Treble" };
     public MemoryZoneController memoryZone;
 
     public string InteractionPrompt => memoryZone != null && memoryZone.IsRestored ? "Already restored" : "Press E to solve puzzle";

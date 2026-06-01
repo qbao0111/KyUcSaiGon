@@ -22,10 +22,14 @@ public class UIManager : MonoBehaviour
     public Transform quickChoiceRoot;
     public Button quickChoiceButtonPrefab;
     public Text puzzleFeedbackText;
+    public Button submitPuzzleButton;
+    public Button closePuzzleButton;
 
     public bool IsBlockingPlayerInput => puzzlePanel != null && puzzlePanel.activeSelf;
 
     private PuzzleInteractable activePuzzle;
+    private readonly int[] stepperValues = new int[3];
+    private readonly Button[] stepperValueButtons = new Button[3];
 
     private void Awake()
     {
@@ -34,6 +38,7 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
+        BindPuzzleButtons();
         ShowInteractionPrompt(false, string.Empty);
         HideDialogue();
         HidePuzzle();
@@ -124,7 +129,11 @@ public class UIManager : MonoBehaviour
 
         ClearQuickChoices();
 
-        if (quickChoiceButtonPrefab != null && quickChoiceRoot != null && puzzle.quickChoices != null)
+        if (puzzle.useThreeValueStepper)
+        {
+            BuildThreeValueStepper(puzzle);
+        }
+        else if (quickChoiceButtonPrefab != null && quickChoiceRoot != null && puzzle.quickChoices != null)
         {
             foreach (string choice in puzzle.quickChoices)
             {
@@ -159,7 +168,7 @@ public class UIManager : MonoBehaviour
         }
 
         bool solved = activePuzzle.TrySolve(puzzleInput.text);
-        puzzleFeedbackText.text = solved ? "Correct. Memory restored." : "Not yet. Look for the hints.";
+        puzzleFeedbackText.text = solved ? activePuzzle.correctFeedback : activePuzzle.wrongFeedback;
         PrototypeLogger.Info("Puzzle submit: " + activePuzzle.puzzleTitle + " | Input: " + puzzleInput.text + " | Solved: " + solved);
 
         if (solved)
@@ -189,6 +198,98 @@ public class UIManager : MonoBehaviour
         for (int i = quickChoiceRoot.childCount - 1; i >= 0; i--)
         {
             Destroy(quickChoiceRoot.GetChild(i).gameObject);
+        }
+    }
+
+    private void BindPuzzleButtons()
+    {
+        if (puzzlePanel == null)
+        {
+            return;
+        }
+
+        if (submitPuzzleButton == null)
+        {
+            Transform submitTransform = puzzlePanel.transform.Find("SubmitPuzzleButton");
+            if (submitTransform != null)
+            {
+                submitPuzzleButton = submitTransform.GetComponent<Button>();
+            }
+        }
+
+        if (closePuzzleButton == null)
+        {
+            Transform closeTransform = puzzlePanel.transform.Find("ClosePuzzleButton");
+            if (closeTransform != null)
+            {
+                closePuzzleButton = closeTransform.GetComponent<Button>();
+            }
+        }
+
+        if (submitPuzzleButton != null)
+        {
+            submitPuzzleButton.onClick.RemoveAllListeners();
+            submitPuzzleButton.onClick.AddListener(SubmitPuzzle);
+        }
+
+        if (closePuzzleButton != null)
+        {
+            closePuzzleButton.onClick.RemoveAllListeners();
+            closePuzzleButton.onClick.AddListener(HidePuzzle);
+        }
+    }
+
+    private void BuildThreeValueStepper(PuzzleInteractable puzzle)
+    {
+        if (quickChoiceButtonPrefab == null || quickChoiceRoot == null)
+        {
+            return;
+        }
+
+        for (int index = 0; index < stepperValues.Length; index++)
+        {
+            int capturedIndex = index;
+            stepperValues[index] = 0;
+
+            Button decrease = Instantiate(quickChoiceButtonPrefab, quickChoiceRoot);
+            decrease.gameObject.SetActive(true);
+            decrease.GetComponentInChildren<Text>().text = "-";
+            decrease.onClick.AddListener(() => AdjustStepperValue(capturedIndex, -1));
+
+            Button increase = Instantiate(quickChoiceButtonPrefab, quickChoiceRoot);
+            increase.gameObject.SetActive(true);
+            stepperValueButtons[index] = increase;
+            increase.onClick.AddListener(() => AdjustStepperValue(capturedIndex, 1));
+        }
+
+        RefreshStepperInput(puzzle);
+    }
+
+    private void AdjustStepperValue(int index, int amount)
+    {
+        stepperValues[index] = (stepperValues[index] + amount + 10) % 10;
+        RefreshStepperInput(activePuzzle);
+    }
+
+    private void RefreshStepperInput(PuzzleInteractable puzzle)
+    {
+        if (puzzle == null)
+        {
+            return;
+        }
+
+        puzzleInput.text = stepperValues[0] + "-" + stepperValues[1] + "-" + stepperValues[2];
+        for (int index = 0; index < stepperValueButtons.Length; index++)
+        {
+            if (stepperValueButtons[index] == null)
+            {
+                continue;
+            }
+
+            string label = puzzle.stepperLabels != null && index < puzzle.stepperLabels.Length
+                ? puzzle.stepperLabels[index]
+                : "Value " + (index + 1);
+            stepperValueButtons[index].GetComponentInChildren<Text>().text = label + ": " + stepperValues[index] + " +";
         }
     }
 

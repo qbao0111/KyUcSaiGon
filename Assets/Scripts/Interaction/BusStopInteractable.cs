@@ -5,14 +5,22 @@ public class BusStopInteractable : MonoBehaviour, IInteractable
     public string targetScene = SceneLoader.BusHub;
     public bool requireCurrentZoneRestored = true;
     public MemoryZoneController currentZone;
-    public string InteractionPrompt => "Press E to board bus";
+    public string interactionPrompt = "Press E to board bus";
+    public string InteractionPrompt => interactionPrompt;
+
+    private void Awake()
+    {
+        if (currentZone != null)
+        {
+            currentZone.Restored += HandleZoneRestored;
+        }
+    }
 
     private void Start()
     {
         if (requireCurrentZoneRestored && currentZone != null)
         {
             gameObject.SetActive(currentZone.IsRestored);
-            currentZone.Restored += HandleZoneRestored;
         }
     }
 

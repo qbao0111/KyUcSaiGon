@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Reflection;
 
 public class MapSelectionInteractable : MonoBehaviour, IInteractable
 {
@@ -7,22 +8,32 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
     public string displayName = "Route";
     public bool isEndingRoute;
     public Renderer statusRenderer;
+    public Component statusLabel;
+    public bool allowRevisit = true;
+    public float routeLabelVisibleDistance = 7f;
 
-    public string InteractionPrompt => "Press E to select route";
+    public string InteractionPrompt => "Nhấn E để chọn địa điểm";
 
     private void Start()
     {
         RefreshVisualState();
+        RefreshLabelVisibility();
+    }
+
+    private void Update()
+    {
+        RefreshLabelVisibility();
     }
 
     public void Interact(Interactor interactor)
     {
         GameProgressManager progress = GameProgressManager.Instance;
+        bool developerMode = DeveloperMode.IsEnabled;
         PrototypeLogger.Info("Route interact: " + displayName + " -> " + targetScene);
 
         if (isEndingRoute)
         {
-            if (progress != null && progress.endingUnlocked)
+            if (developerMode || (progress != null && progress.endingUnlocked))
             {
                 PrototypeLogger.Info("Loading ending route.");
                 SceneLoader.Load(SceneLoader.Ending);
@@ -35,15 +46,15 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        if (targetLocation != LocationId.NguyenHue && progress != null && !progress.IsRestored(LocationId.NguyenHue))
+        if (!developerMode && targetLocation != LocationId.NguyenHue && progress != null && !progress.IsRestored(LocationId.NguyenHue))
         {
             UIManager.Instance?.ShowDialogue("Hay hoan thanh Nguyen Hue truoc de mo cac tuyen xe khac.");
             return;
         }
 
-        if (progress != null && progress.IsRestored(targetLocation))
+        if (!developerMode && progress != null && progress.IsRestored(targetLocation) && !allowRevisit)
         {
-            UIManager.Instance?.ShowDialogue(displayName + " da hoan thanh.");
+            UIManager.Instance?.ShowDialogue(displayName + " đã khôi phục.");
             return;
         }
 
@@ -63,7 +74,43 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
         }
 
         bool completed = targetLocation != LocationId.None && GameProgressManager.Instance.IsRestored(targetLocation);
-        bool unlocked = isEndingRoute ? GameProgressManager.Instance.endingUnlocked : targetLocation == LocationId.NguyenHue || GameProgressManager.Instance.IsRestored(LocationId.NguyenHue);
+        bool dev = DeveloperMode.IsEnabled;
+        bool unlocked = dev || (isEndingRoute ? GameProgressManager.Instance.endingUnlocked : targetLocation == LocationId.NguyenHue || GameProgressManager.Instance.IsRestored(LocationId.NguyenHue));
         statusRenderer.material.color = completed ? Color.green : unlocked ? Color.yellow : Color.gray;
+
+        string status = completed ? "Đã khôi phục" : unlocked ? (dev ? "Mở khóa (Dev)" : "Chưa khôi phục") : "Chưa mở khóa";
+        SetStatusLabel(displayName + "\n" + status);
+    }
+
+    private void SetStatusLabel(string text)
+    {
+        if (statusLabel == null)
+        {
+            return;
+        }
+
+        if (statusLabel is TextMesh textMesh)
+        {
+            textMesh.text = text;
+            return;
+        }
+
+        PropertyInfo textProperty = statusLabel.GetType().GetProperty("text");
+        if (textProperty != null && textProperty.CanWrite)
+        {
+            textProperty.SetValue(statusLabel, text);
+        }
+    }
+
+    private void RefreshLabelVisibility()
+    {
+        if (statusLabel == null)
+        {
+            return;
+        }
+
+        Camera mainCamera = Camera.main;
+        bool isNearby = mainCamera != null && Vector3.Distance(mainCamera.transform.position, transform.position) <= routeLabelVisibleDistance;
+        statusLabel.gameObject.SetActive(isNearby);
     }
 }

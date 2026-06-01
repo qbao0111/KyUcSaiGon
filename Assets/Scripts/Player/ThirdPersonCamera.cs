@@ -3,20 +3,31 @@ using UnityEngine;
 public class ThirdPersonCamera : MonoBehaviour
 {
     public Transform target;
-    public float distance = 6f;
-    public float height = 1.4f;
+    public float distance = 7f;
+    public float height = 2.8f;
     public float mouseSensitivity = 2f;
-    public float minPitch = 8f;
-    public float maxPitch = 38f;
+    public float minPitch = -30f;
+    public float maxPitch = 65f;
+    public float followSmoothTime = 0.08f;
+    public float rotationSmoothTime = 0.04f;
     public float cameraCollisionRadius = 0.25f;
     public LayerMask collisionMask = ~0;
 
     private float yaw;
     private float pitch = 18f;
+    private Vector3 positionVelocity;
+    private Vector3 currentLookDirection;
+    private Vector3 lookDirectionVelocity;
+    private bool initialized;
 
     private void Start()
     {
         ApplyStableViewDefaults();
+        Camera attachedCamera = GetComponent<Camera>();
+        if (attachedCamera != null)
+        {
+            attachedCamera.fieldOfView = 60f;
+        }
 
         if (target != null)
         {
@@ -55,27 +66,47 @@ public class ThirdPersonCamera : MonoBehaviour
             desiredPosition = focusPoint + toCamera.normalized * Mathf.Max(0.6f, hit.distance - 0.1f);
         }
 
-        transform.position = desiredPosition;
-        transform.rotation = Quaternion.LookRotation(focusPoint - desiredPosition, Vector3.up);
+        if (!initialized)
+        {
+            transform.position = desiredPosition;
+            initialized = true;
+        }
+        else
+        {
+            transform.position = Vector3.SmoothDamp(transform.position, desiredPosition, ref positionVelocity, followSmoothTime);
+        }
+
+        Vector3 desiredLookDirection = (focusPoint - transform.position).normalized;
+        if (currentLookDirection == Vector3.zero)
+        {
+            currentLookDirection = desiredLookDirection;
+        }
+
+        currentLookDirection = Vector3.SmoothDamp(currentLookDirection, desiredLookDirection, ref lookDirectionVelocity, rotationSmoothTime);
+        transform.rotation = Quaternion.LookRotation(currentLookDirection, Vector3.up);
     }
 
     private void ApplyStableViewDefaults()
     {
-        // Older generated scenes may have allowed negative pitch, which lets the
-        // camera slide below the character. Clamp those serialized values here.
-        if (height > 1.7f)
+        // Keep orbit stable but allow looking up to inspect tall landmarks.
+        if (distance < 4f || distance > 8f)
         {
-            height = 1.4f;
+            distance = 7f;
         }
 
-        if (minPitch < 0f)
+        if (height < 0.8f || height > 3.2f)
         {
-            minPitch = 8f;
+            height = 2.8f;
         }
 
-        if (maxPitch > 42f)
+        if (minPitch < -45f || minPitch > 10f)
         {
-            maxPitch = 38f;
+            minPitch = -30f;
+        }
+
+        if (maxPitch < 25f || maxPitch > 80f || maxPitch <= minPitch)
+        {
+            maxPitch = 65f;
         }
 
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
