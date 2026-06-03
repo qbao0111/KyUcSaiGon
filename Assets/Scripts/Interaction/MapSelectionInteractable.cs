@@ -6,9 +6,16 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
     public LocationId targetLocation;
     public string targetScene;
     public string displayName = "Route";
+    public string subtitle;
     public bool isEndingRoute;
+    public bool isDeveloperOnly;
+    public bool allowInDeveloperMode = true;
     public Renderer statusRenderer;
+    public Renderer buttonRenderer;
     public Component statusLabel;
+    public TextMesh titleText;
+    public TextMesh subtitleText;
+    public TextMesh statusText;
     public bool allowRevisit = true;
     public float routeLabelVisibleDistance = 7f;
 
@@ -16,12 +23,14 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
 
     private void Start()
     {
+        ApplyDeveloperVisibility();
         RefreshVisualState();
         RefreshLabelVisibility();
     }
 
     private void Update()
     {
+        ApplyDeveloperVisibility();
         RefreshLabelVisibility();
     }
 
@@ -30,6 +39,18 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
         GameProgressManager progress = GameProgressManager.Instance;
         bool developerMode = DeveloperMode.IsEnabled;
         PrototypeLogger.Info("Route interact: " + displayName + " -> " + targetScene);
+
+        if (isDeveloperOnly)
+        {
+            if (!developerMode || !allowInDeveloperMode)
+            {
+                UIManager.Instance?.ShowDialogue("Mục này chỉ dùng cho Developer Test Mode.");
+                return;
+            }
+
+            SceneLoader.Load(targetScene);
+            return;
+        }
 
         if (isEndingRoute)
         {
@@ -46,12 +67,6 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        if (!developerMode && targetLocation != LocationId.NguyenHue && progress != null && !progress.IsRestored(LocationId.NguyenHue))
-        {
-            UIManager.Instance?.ShowDialogue("Hay hoan thanh Nguyen Hue truoc de mo cac tuyen xe khac.");
-            return;
-        }
-
         if (!developerMode && progress != null && progress.IsRestored(targetLocation) && !allowRevisit)
         {
             UIManager.Instance?.ShowDialogue(displayName + " đã khôi phục.");
@@ -63,9 +78,15 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
 
     public void RefreshVisualState()
     {
+        ApplyDeveloperVisibility();
+        if (!gameObject.activeSelf)
+        {
+            return;
+        }
+
         if (statusRenderer == null)
         {
-            statusRenderer = GetComponentInChildren<Renderer>();
+            statusRenderer = buttonRenderer != null ? buttonRenderer : GetComponentInChildren<Renderer>();
         }
 
         if (statusRenderer == null || GameProgressManager.Instance == null)
@@ -75,11 +96,41 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
 
         bool completed = targetLocation != LocationId.None && GameProgressManager.Instance.IsRestored(targetLocation);
         bool dev = DeveloperMode.IsEnabled;
-        bool unlocked = dev || (isEndingRoute ? GameProgressManager.Instance.endingUnlocked : targetLocation == LocationId.NguyenHue || GameProgressManager.Instance.IsRestored(LocationId.NguyenHue));
+        bool unlocked = dev || isDeveloperOnly || (isEndingRoute ? GameProgressManager.Instance.endingUnlocked : true);
         statusRenderer.material.color = completed ? Color.green : unlocked ? Color.yellow : Color.gray;
 
-        string status = completed ? "Đã khôi phục" : unlocked ? (dev ? "Mở khóa (Dev)" : "Chưa khôi phục") : "Chưa mở khóa";
-        SetStatusLabel(displayName + "\n" + status);
+        string status = isDeveloperOnly
+            ? "DEV ONLY"
+            : completed ? "Đã khôi phục" : unlocked ? (dev ? "DEV: Mở khóa để test" : "Chưa khôi phục") : "Chưa mở khóa";
+
+        if (titleText != null)
+        {
+            titleText.text = displayName;
+        }
+
+        if (subtitleText != null)
+        {
+            subtitleText.text = subtitle;
+        }
+
+        if (statusText != null)
+        {
+            statusText.text = status;
+        }
+
+        SetStatusLabel(displayName + "\n" + (string.IsNullOrWhiteSpace(subtitle) ? string.Empty : subtitle + "\n") + status);
+    }
+
+    private void ApplyDeveloperVisibility()
+    {
+        if (isDeveloperOnly)
+        {
+            bool visible = DeveloperMode.IsEnabled && allowInDeveloperMode;
+            if (gameObject.activeSelf != visible)
+            {
+                gameObject.SetActive(visible);
+            }
+        }
     }
 
     private void SetStatusLabel(string text)
@@ -104,13 +155,24 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
 
     private void RefreshLabelVisibility()
     {
-        if (statusLabel == null)
-        {
-            return;
-        }
-
         Camera mainCamera = Camera.main;
         bool isNearby = mainCamera != null && Vector3.Distance(mainCamera.transform.position, transform.position) <= routeLabelVisibleDistance;
-        statusLabel.gameObject.SetActive(isNearby);
+
+        SetTextVisible(titleText, isNearby);
+        SetTextVisible(subtitleText, isNearby);
+        SetTextVisible(statusText, isNearby);
+
+        if (statusLabel != null && statusLabel != titleText && statusLabel != subtitleText && statusLabel != statusText)
+        {
+            statusLabel.gameObject.SetActive(isNearby);
+        }
+    }
+
+    private void SetTextVisible(TextMesh textMesh, bool visible)
+    {
+        if (textMesh != null)
+        {
+            textMesh.gameObject.SetActive(visible);
+        }
     }
 }

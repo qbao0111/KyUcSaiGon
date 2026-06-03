@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -221,13 +222,17 @@ public static class KyUcSaiGonSceneGenerator
         CreateWorldLabel("Bảng lộ trình", parent, new Vector3(0.5f, 4.85f, 14.04f), 0.36f, false);
         CreateWorldLabel("Chọn địa điểm tiếp theo", parent, new Vector3(0.5f, 4.4f, 14.04f), 0.24f, false);
 
-        CreateRouteButton(parent, "RouteButton_NguyenHue_Tutorial", "Nguyễn Huệ Tutorial", LocationId.NguyenHue, SceneLoader.NguyenHue, new Vector3(-2.6f, 3.6f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_BenThanh", "Chợ Bến Thành", LocationId.BenThanh, SceneLoader.BenThanh, new Vector3(-0.55f, 3.6f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_DinhDocLap", "Dinh Độc Lập", LocationId.DinhDocLap, SceneLoader.DinhDocLap, new Vector3(1.5f, 3.6f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_NhaThoDucBa", "Nhà thờ Đức Bà", LocationId.NhaThoDucBa, SceneLoader.NhaThoDucBa, new Vector3(3.55f, 3.6f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_Bitexco", "Bitexco", LocationId.Bitexco, SceneLoader.Bitexco, new Vector3(-1.55f, 2.35f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_BachDang", "Bến Bạch Đằng", LocationId.BachDang, SceneLoader.BachDang, new Vector3(0.5f, 2.35f, 14.28f), false);
-        CreateRouteButton(parent, "RouteButton_Ending_Landmark81", "Landmark 81", LocationId.None, SceneLoader.Ending, new Vector3(2.55f, 2.35f, 14.28f), true);
+        CreateRouteButton(parent, "RouteButton_NguyenHue", "Nguyễn Huệ", "Nhịp sống trẻ", LocationId.NguyenHue, SceneLoader.NguyenHue, new Vector3(-1.95f, 3.6f, 14.28f), false);
+        CreateRouteButton(parent, "RouteButton_BenThanh", "Chợ Bến Thành", "Đời sống thường ngày", LocationId.BenThanh, SceneLoader.BenThanh, new Vector3(0.5f, 3.6f, 14.28f), false);
+        CreateRouteButton(parent, "RouteButton_DinhDocLap", "Dinh Độc Lập", "Lịch sử", LocationId.DinhDocLap, SceneLoader.DinhDocLap, new Vector3(2.95f, 3.6f, 14.28f), false);
+        CreateRouteButton(parent, "RouteButton_NhaThoDucBa", "Nhà thờ\nĐức Bà", "Bình yên", LocationId.NhaThoDucBa, SceneLoader.NhaThoDucBa, new Vector3(-1.95f, 2.35f, 14.28f), false);
+        CreateRouteButton(parent, "RouteButton_Bitexco", "Bitexco", "Chuyển mình", LocationId.Bitexco, SceneLoader.Bitexco, new Vector3(0.5f, 2.35f, 14.28f), false);
+        CreateRouteButton(parent, "RouteButton_BachDang", "Bến Bạch\nĐằng", "Dòng chảy thành phố", LocationId.BachDang, SceneLoader.BachDang, new Vector3(2.95f, 2.35f, 14.28f), false);
+
+        GameObject devToolsRoot = new GameObject("DevToolsRoot");
+        devToolsRoot.transform.SetParent(parent);
+        devToolsRoot.transform.localPosition = Vector3.zero;
+        CreateRouteButton(devToolsRoot.transform, "DevButton_Ending", "DEV: Ending", "Không tính vào ký ức", LocationId.None, SceneLoader.Ending, new Vector3(0.5f, 1.25f, 14.28f), true);
     }
 
     private static void CreateBusGuidanceLights(Transform parent)
@@ -1887,16 +1892,14 @@ public static class KyUcSaiGonSceneGenerator
         GameObject progress = new GameObject("GameProgressManager");
         progress.AddComponent<GameProgressManager>();
 
-        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        GameObject player = new GameObject("REPLACE_Player_Character");
         player.name = "REPLACE_Player_Character";
         player.transform.position = spawnPosition;
-        player.GetComponent<Renderer>().material = CreateMaterial(InteractableBlue);
-        UnityEngine.Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
 
         CharacterController controller = player.AddComponent<CharacterController>();
-        controller.height = 1.8f;
-        controller.radius = 0.4f;
-        controller.center = Vector3.zero;
+        controller.height = 2.2f;
+        controller.radius = 0.45f;
+        controller.center = new Vector3(0f, 0.2f, 0f);
 
         GameObject target = new GameObject("Player_CameraTarget");
         target.transform.SetParent(player.transform);
@@ -1927,12 +1930,116 @@ public static class KyUcSaiGonSceneGenerator
         ThirdPersonPlayerController playerController = player.AddComponent<ThirdPersonPlayerController>();
         playerController.cameraTransform = cameraObject.transform;
 
+        CreatePlayerVisual(player.transform);
+
         Interactor interactor = player.AddComponent<Interactor>();
         interactor.playerCamera = camera;
         interactor.interactionRange = 5f;
         interactor.nearbyInteractionRadius = 3.5f;
 
         CreateUI(objective);
+    }
+
+    private static void CreatePlayerVisual(Transform playerRoot)
+    {
+        const string prefabPath = "Assets/P09_Modular_Humanoid/Model_DATA/Prefab/P09_Human.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        GameObject visual;
+
+        if (prefab != null)
+        {
+            visual = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            visual.name = "Visual_REPLACE_Player_P09_Humandroid";
+            visual.transform.SetParent(playerRoot);
+            visual.transform.localPosition = new Vector3(0f, -0.9f, 0f);
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one * 1.45f;
+            RemoveCollidersFromVisual(visual);
+            ConfigurePlayerAnimator(visual);
+        }
+        else
+        {
+            visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            visual.name = "Visual_REPLACE_Player_CapsuleFallback";
+            visual.transform.SetParent(playerRoot);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+            visual.GetComponent<Renderer>().material = CreateMaterial(InteractableBlue);
+            UnityEngine.Object.DestroyImmediate(visual.GetComponent<CapsuleCollider>());
+            Debug.LogWarning("[KyUcSaiGon] P09 player prefab not found. Using capsule fallback.");
+        }
+
+        PlayerMovementAnimator movementAnimator = playerRoot.gameObject.AddComponent<PlayerMovementAnimator>();
+        movementAnimator.visualRoot = visual.transform;
+        movementAnimator.animator = visual.GetComponentInChildren<Animator>();
+        movementAnimator.targetVisualScale = 1.45f;
+    }
+
+    private static void RemoveCollidersFromVisual(GameObject visual)
+    {
+        Collider[] colliders = visual.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+        {
+            UnityEngine.Object.DestroyImmediate(collider);
+        }
+    }
+
+    private static void ConfigurePlayerAnimator(GameObject visual)
+    {
+        Animator animator = visual.GetComponentInChildren<Animator>();
+        if (animator == null)
+        {
+            animator = visual.AddComponent<Animator>();
+        }
+
+        RuntimeAnimatorController controller = CreateOrLoadPlayerAnimatorController();
+        if (controller != null)
+        {
+            animator.runtimeAnimatorController = controller;
+            animator.applyRootMotion = false;
+        }
+    }
+
+    private static RuntimeAnimatorController CreateOrLoadPlayerAnimatorController()
+    {
+        const string controllerPath = "Assets/P09_Modular_Humanoid/KyUcSaiGon_P09_Player.controller";
+        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+        if (controller != null)
+        {
+            return controller;
+        }
+
+        AnimationClip idleClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/P09_Modular_Humanoid/Scenes/DemoScene_Data/Animation/Demo_Pose/P09_Male_idle.anim");
+        AnimationClip runClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/P09_Modular_Humanoid/Scenes/DemoScene_Data/Animation/Other/Run_A_v01.anim");
+        if (idleClip == null || runClip == null)
+        {
+            Debug.LogWarning("[KyUcSaiGon] P09 animation clips missing. Procedural movement animation will still run.");
+            return null;
+        }
+
+        controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
+        controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
+
+        AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+        AnimatorState idle = stateMachine.AddState("Idle");
+        idle.motion = idleClip;
+        AnimatorState run = stateMachine.AddState("Run");
+        run.motion = runClip;
+        stateMachine.defaultState = idle;
+
+        AnimatorStateTransition toRun = idle.AddTransition(run);
+        toRun.hasExitTime = false;
+        toRun.duration = 0.18f;
+        toRun.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
+
+        AnimatorStateTransition toIdle = run.AddTransition(idle);
+        toIdle.hasExitTime = false;
+        toIdle.duration = 0.18f;
+        toIdle.AddCondition(AnimatorConditionMode.Less, 0.08f, "Speed");
+
+        AssetDatabase.SaveAssets();
+        return controller;
     }
 
     private static void CreateUI(string objective)
@@ -2154,7 +2261,7 @@ public static class KyUcSaiGonSceneGenerator
         CreateWorldLabel("Bus Stop", parent, position + Vector3.up * 2.5f, 0.42f);
     }
 
-    private static void CreateRouteButton(Transform parent, string objectName, string displayName, LocationId locationId, string sceneName, Vector3 position, bool ending)
+    private static void CreateRouteButton(Transform parent, string objectName, string displayName, string subtitle, LocationId locationId, string sceneName, Vector3 position, bool developerOnly)
     {
         GameObject button = new GameObject(objectName);
         button.transform.SetParent(parent);
@@ -2166,13 +2273,8 @@ public static class KyUcSaiGonSceneGenerator
         Renderer renderer = visual.GetComponent<Renderer>();
         renderer.material.EnableKeyword("_EMISSION");
         renderer.material.SetColor("_EmissionColor", PuzzleYellow * 1.2f);
-        MapSelectionInteractable interactable = button.AddComponent<MapSelectionInteractable>();
-        interactable.targetLocation = locationId;
-        interactable.targetScene = sceneName;
-        interactable.displayName = displayName;
-        interactable.isEndingRoute = ending;
-        interactable.statusRenderer = renderer;
-        interactable.statusLabel = CreateWorldLabel(displayName, button.transform, position + Vector3.up * 0.08f + Vector3.back * 0.22f, 0.18f, false);
+        collider.enabled = false;
+        CreateWorldLabel(displayName, button.transform, position + Vector3.back * 0.22f, 0.08f, false);
     }
 
     private static void AddGlowLight(string name, Transform parent, Vector3 position, Color color, float range, float intensity)

@@ -10,6 +10,7 @@ public static class DeveloperMode
     {
         PlayerPrefs.SetInt(PlayerPrefsKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
+        GameProgressManager.Instance?.RefreshDeveloperMode();
         PrototypeLogger.Info("Developer mode: " + (enabled ? "ON" : "OFF"));
     }
 }

@@ -10,6 +10,10 @@ public class ThirdPersonPlayerController : MonoBehaviour
 
     private CharacterController controller;
     private float verticalVelocity;
+    private Vector3 lastPlanarVelocity;
+
+    public float PlanarSpeed => lastPlanarVelocity.magnitude;
+    public float NormalizedMoveSpeed => moveSpeed > 0.01f ? Mathf.Clamp01(PlanarSpeed / moveSpeed) : 0f;
 
     private void Awake()
     {
@@ -71,6 +75,7 @@ public class ThirdPersonPlayerController : MonoBehaviour
 
         verticalVelocity += gravity * Time.deltaTime;
         Vector3 velocity = moveDirection * moveSpeed;
+        lastPlanarVelocity = velocity;
         velocity.y = verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
     }

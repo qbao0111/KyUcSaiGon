@@ -18,6 +18,7 @@ public class GameProgressManager : MonoBehaviour
     public int memoryFragmentsCollected;
     public bool busHubUnlocked;
     public bool endingUnlocked;
+    public bool developerMode;
 
     [Header("Location States")]
     public LocationProgress[] locationStates =
@@ -42,6 +43,7 @@ public class GameProgressManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        developerMode = DeveloperMode.IsEnabled;
         RecalculateProgress();
     }
 
@@ -95,6 +97,21 @@ public class GameProgressManager : MonoBehaviour
         UIManager.Instance?.RefreshProgressText();
     }
 
+    public bool AreAllMemoriesRestored()
+    {
+        return IsRestored(LocationId.NguyenHue)
+            && IsRestored(LocationId.BenThanh)
+            && IsRestored(LocationId.DinhDocLap)
+            && IsRestored(LocationId.NhaThoDucBa)
+            && IsRestored(LocationId.Bitexco)
+            && IsRestored(LocationId.BachDang);
+    }
+
+    public void RefreshDeveloperMode()
+    {
+        developerMode = DeveloperMode.IsEnabled;
+    }
+
     private LocationProgress GetLocationProgress(LocationId locationId)
     {
         foreach (LocationProgress progress in locationStates)
@@ -125,6 +142,6 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
-        endingUnlocked = memoryFragmentsCollected >= 6;
+        endingUnlocked = AreAllMemoriesRestored();
     }
 }

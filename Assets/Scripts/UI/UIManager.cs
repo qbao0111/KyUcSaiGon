@@ -25,7 +25,8 @@ public class UIManager : MonoBehaviour
     public Button submitPuzzleButton;
     public Button closePuzzleButton;
 
-    public bool IsBlockingPlayerInput => puzzlePanel != null && puzzlePanel.activeSelf;
+    public bool externalInputBlocked;
+    public bool IsBlockingPlayerInput => externalInputBlocked || (puzzlePanel != null && puzzlePanel.activeSelf);
 
     private PuzzleInteractable activePuzzle;
     private readonly int[] stepperValues = new int[3];
@@ -186,6 +187,20 @@ public class UIManager : MonoBehaviour
 
         activePuzzle = null;
         UnlockCursorIfNoPanel();
+    }
+
+    public void SetExternalInputBlocked(bool blocked)
+    {
+        externalInputBlocked = blocked;
+        if (blocked)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            UnlockCursorIfNoPanel();
+        }
     }
 
     private void ClearQuickChoices()
