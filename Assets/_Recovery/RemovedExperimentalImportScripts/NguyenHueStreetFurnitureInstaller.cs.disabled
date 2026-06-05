@@ -1,0 +1,1114 @@
+#if UNITY_EDITOR
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using GLTFast;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+public static class NguyenHueStreetFurnitureInstaller
+{
+    private const string ScenePath = "Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity";
+    private const string ModelFolderPath = "Assets/Art/Models/NguyenHue/StreetFurniture";
+    private const string PrefabFolderPath = "Assets/Art/Prefabs/NguyenHue/StreetFurniture";
+    private const string MaterialFolderPath = "Assets/Art/Materials/NguyenHue/StreetFurniture";
+    private const string AutoRunFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurnitureInstaller.flag";
+    private const string ApplyPresetFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurniturePreset.flag";
+    private const string RepairMaterialsFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurnitureMaterialRepair.flag";
+    private const string PrimitiveRestoreFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurniturePrimitiveRestore.flag";
+    private const string RestoreFromRecoveryFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurnitureRestoreFromRecovery.flag";
+    private const string RecoveryScenePath = "Assets/_Recovery/0 (1).unity";
+    private const string BrokenFbxRecoveryFolderPath = "Assets/_Recovery/BrokenConvertedFBX/StreetFurniture";
+
+    private const string BenchModelPath = "Assets/Art/Models/NguyenHue/StreetFurniture/nguyen_hue_street_bench.glb";
+    private const string LampModelPath = "Assets/Art/Models/NguyenHue/StreetFurniture/nguyen_hue_street_lamp.glb";
+    private const string TreeModelPath = "Assets/Art/Models/NguyenHue/StreetFurniture/nguyen_hue_street_tree.glb";
+
+    private const string BenchPrefabPath = "Assets/Art/Prefabs/NguyenHue/StreetFurniture/PF_NguyenHue_StreetBench.prefab";
+    private const string LampPrefabPath = "Assets/Art/Prefabs/NguyenHue/StreetFurniture/PF_NguyenHue_StreetLamp.prefab";
+    private const string TreePrefabPath = "Assets/Art/Prefabs/NguyenHue/StreetFurniture/PF_NguyenHue_StreetTree.prefab";
+
+    [InitializeOnLoadMethod]
+    private static void AutoRunIfRequested()
+    {
+        EditorApplication.delayCall += () =>
+        {
+            if (File.Exists(ApplyPresetFlagPath))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                Scene presetScene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+                ApplyPresetsToExistingFurniture();
+                EditorSceneManager.MarkSceneDirty(presetScene);
+                EditorSceneManager.SaveScene(presetScene);
+                AssetDatabase.DeleteAsset(ApplyPresetFlagPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture transform presets applied from pending flag.");
+                return;
+            }
+
+            if (File.Exists(RepairMaterialsFlagPath))
+            {
+                // Keep original GLB material assignments intact. The old material repair path
+                // force-painted imported furniture and made the assets look wrong.
+                AssetDatabase.DeleteAsset(RepairMaterialsFlagPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.LogWarning("[KyUcSaiGon] Street furniture material repair flag ignored. Rebuild from original GLB instead.");
+                return;
+            }
+
+            if (File.Exists(PrimitiveRestoreFlagPath))
+            {
+                // Primitive fallback is intentionally disabled now. Nguyen Hue furniture must use
+                // the original GLB assets so future replacement/imports stay predictable.
+                AssetDatabase.DeleteAsset(PrimitiveRestoreFlagPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.LogWarning("[KyUcSaiGon] Primitive furniture fallback flag ignored. Use original GLB furniture.");
+                return;
+            }
+
+            if (File.Exists(RestoreFromRecoveryFlagPath))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                RestoreStreetFurnitureFromRecoveryScene();
+                AssetDatabase.DeleteAsset(RestoreFromRecoveryFlagPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture restored from recovery flag.");
+                return;
+            }
+
+            if (!File.Exists(AutoRunFlagPath))
+            {
+                return;
+            }
+
+            EditorSceneManager.SaveOpenScenes();
+            EnsureAssetsAndPrefabs();
+            Scene installScene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            ApplyToOpenScene();
+            EditorSceneManager.MarkSceneDirty(installScene);
+            EditorSceneManager.SaveScene(installScene);
+            AssetDatabase.DeleteAsset(AutoRunFlagPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture installed from pending flag.");
+        };
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Apply Nguyen Hue Street Furniture Models")]
+    public static void ApplyStreetFurniture()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        {
+            Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture install cancelled.");
+            return;
+        }
+
+        Scene currentScene = SceneManager.GetActiveScene();
+        bool shouldRestoreOpenScene = currentScene.IsValid()
+                                      && !string.IsNullOrWhiteSpace(currentScene.path)
+                                      && currentScene.path != ScenePath;
+
+        EnsureAssetsAndPrefabs();
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        ApplyToOpenScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        if (shouldRestoreOpenScene)
+        {
+            EditorSceneManager.OpenScene(currentScene.path, OpenSceneMode.Single);
+        }
+
+        Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture installed.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Restore Nguyen Hue Street Furniture Original GLB")]
+    public static void RestoreOriginalGlbStreetFurniture()
+    {
+        EditorSceneManager.SaveOpenScenes();
+        EnsureAssetsAndPrefabs();
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        ApplyToOpenScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture restored from original GLB.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Apply Nguyen Hue Street Furniture Transform Presets")]
+    public static void ApplyStreetFurnitureTransformPresets()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        {
+            Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture preset apply cancelled.");
+            return;
+        }
+
+        Scene currentScene = SceneManager.GetActiveScene();
+        bool shouldRestoreOpenScene = currentScene.IsValid()
+                                      && !string.IsNullOrWhiteSpace(currentScene.path)
+                                      && currentScene.path != ScenePath;
+
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        ApplyPresetsToExistingFurniture();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        if (shouldRestoreOpenScene)
+        {
+            EditorSceneManager.OpenScene(currentScene.path, OpenSceneMode.Single);
+        }
+
+        Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture transform presets applied.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Repair Nguyen Hue Street Furniture Materials")]
+    public static void RepairStreetFurnitureMaterials()
+    {
+        Debug.LogWarning("[KyUcSaiGon] Manual material repair is disabled for Nguyen Hue street furniture. Rebuild from original GLB instead.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Restore Nguyen Hue Street Furniture Primitive Fallbacks")]
+    public static void RestoreStreetFurniturePrimitiveFallbacks()
+    {
+        Debug.LogWarning("[KyUcSaiGon] Primitive furniture restore is disabled. Use original GLB furniture.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Restore Nguyen Hue Street Furniture From Recovery")]
+    public static void RestoreStreetFurnitureFromRecoveryScene()
+    {
+        if (!File.Exists(RecoveryScenePath))
+        {
+            Debug.LogError("[KyUcSaiGon] Recovery scene not found: " + RecoveryScenePath);
+            return;
+        }
+
+        Scene targetScene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        Transform targetEnvironmentRoot = FindOrCreateScenePath("SceneBlockoutRoot/NguyenHue_EnvironmentRoot");
+        Transform existingFurniture = targetEnvironmentRoot.Find("StreetFurniture");
+        if (existingFurniture != null)
+        {
+            Object.DestroyImmediate(existingFurniture.gameObject);
+        }
+
+        Scene recoveryScene = EditorSceneManager.OpenScene(RecoveryScenePath, OpenSceneMode.Additive);
+        GameObject recoveryFurniture = FindRootChildInScene(recoveryScene, "SceneBlockoutRoot/NguyenHue_EnvironmentRoot/StreetFurniture");
+        if (recoveryFurniture == null)
+        {
+            EditorSceneManager.CloseScene(recoveryScene, true);
+            Debug.LogError("[KyUcSaiGon] StreetFurniture was not found in recovery scene.");
+            return;
+        }
+
+        GameObject restoredFurniture = Object.Instantiate(recoveryFurniture);
+        restoredFurniture.name = "StreetFurniture";
+        restoredFurniture.transform.localPosition = recoveryFurniture.transform.localPosition;
+        restoredFurniture.transform.localRotation = recoveryFurniture.transform.localRotation;
+        restoredFurniture.transform.localScale = recoveryFurniture.transform.localScale;
+        RemoveCloneSuffix(restoredFurniture.transform);
+
+        EditorSceneManager.MoveGameObjectToScene(restoredFurniture, targetScene);
+        restoredFurniture.transform.SetParent(targetEnvironmentRoot);
+        restoredFurniture.transform.localPosition = recoveryFurniture.transform.localPosition;
+        restoredFurniture.transform.localRotation = recoveryFurniture.transform.localRotation;
+        restoredFurniture.transform.localScale = recoveryFurniture.transform.localScale;
+        EditorSceneManager.CloseScene(recoveryScene, true);
+        EditorSceneManager.MarkSceneDirty(targetScene);
+        EditorSceneManager.SaveScene(targetScene);
+        Debug.Log("[KyUcSaiGon] Nguyen Hue StreetFurniture restored from " + RecoveryScenePath + ".");
+    }
+
+    private static void EnsureAssetsAndPrefabs()
+    {
+        EnsureFolder("Assets/Art", "Models");
+        EnsureFolder("Assets/Art/Models", "NguyenHue");
+        EnsureFolder("Assets/Art/Models/NguyenHue", "StreetFurniture");
+        EnsureFolder("Assets/Art", "Prefabs");
+        EnsureFolder("Assets/Art/Prefabs", "NguyenHue");
+        EnsureFolder("Assets/Art/Prefabs/NguyenHue", "StreetFurniture");
+        EnsureFolder("Assets/Art", "Materials");
+        EnsureFolder("Assets/Art/Materials", "NguyenHue");
+        EnsureFolder("Assets/Art/Materials/NguyenHue", "StreetFurniture");
+        EnsureFolder("Assets/_Recovery", "BrokenConvertedFBX");
+        EnsureFolder("Assets/_Recovery/BrokenConvertedFBX", "StreetFurniture");
+
+        QuarantineBrokenConvertedFbx();
+        CreateFallbackMaterials();
+        CreateOrUpdatePrefab("PF_NguyenHue_StreetBench", "Visual_REPLACE_NguyenHue_StreetBench", BenchModelPath, BenchPrefabPath);
+        CreateOrUpdatePrefab("PF_NguyenHue_StreetLamp", "Visual_REPLACE_NguyenHue_StreetLamp", LampModelPath, LampPrefabPath);
+        CreateOrUpdatePrefab("PF_NguyenHue_StreetTree", "Visual_REPLACE_NguyenHue_StreetTree", TreeModelPath, TreePrefabPath);
+    }
+
+    private static void ApplyToOpenScene()
+    {
+        Transform furnitureRoot = FindOrCreateScenePath("SceneBlockoutRoot/NguyenHue_EnvironmentRoot/StreetFurniture");
+        GameObject benchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BenchPrefabPath);
+        GameObject lampPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LampPrefabPath);
+        GameObject treePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(TreePrefabPath);
+        bool canRebuildFromModels = benchPrefab != null && lampPrefab != null && treePrefab != null;
+        if (!canRebuildFromModels)
+        {
+            Debug.LogWarning("[KyUcSaiGon] Street furniture prefab missing. Scene furniture was kept unchanged to avoid deleting visible objects.");
+            return;
+        }
+
+        Transform benchesRoot = ResetChild(furnitureRoot, "Benches");
+        Transform lampsRoot = ResetChild(furnitureRoot, "Lamps");
+        Transform treesRoot = ResetChild(furnitureRoot, "Trees");
+        Transform rejectedRoot = FindOrCreateChild(furnitureRoot, "RejectedOrOld_Placeholders");
+
+        MoveOldPlaceholders(rejectedRoot);
+        rejectedRoot.gameObject.SetActive(false);
+
+        CreateBenchRow(benchPrefab, benchesRoot);
+        CreateLampRows(lampPrefab, lampsRoot);
+        CreateTreeRows(treePrefab, treesRoot);
+
+        EditorUtility.SetDirty(furnitureRoot);
+    }
+
+    private static void CreateBenchRow(GameObject prefab, Transform parent)
+    {
+        float[] zPositions = { -34f, -20f, -6f, 18f, 32f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            SpawnPrefab(prefab, parent, "Bench_Left_" + (i + 1).ToString("00"), new Vector3(-15.2f, 0f, zPositions[i]), Quaternion.Euler(0f, 90f, 0f));
+            SpawnPrefab(prefab, parent, "Bench_Right_" + (i + 1).ToString("00"), new Vector3(15.2f, 0f, zPositions[i]), Quaternion.Euler(0f, -90f, 0f));
+        }
+    }
+
+    private static void CreateLampRows(GameObject prefab, Transform parent)
+    {
+        float[] zPositions = { -42f, -32f, -22f, -12f, 0f, 12f, 24f, 36f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            SpawnPrefab(prefab, parent, "Lamp_Left_" + (i + 1).ToString("00"), new Vector3(-12.4f, 0f, zPositions[i]), Quaternion.Euler(0f, 90f, 0f));
+            SpawnPrefab(prefab, parent, "Lamp_Right_" + (i + 1).ToString("00"), new Vector3(12.4f, 0f, zPositions[i]), Quaternion.Euler(0f, -90f, 0f));
+        }
+    }
+
+    private static void CreateTreeRows(GameObject prefab, Transform parent)
+    {
+        float[] zPositions = { -38f, -26f, -14f, 0f, 14f, 28f, 38f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            SpawnPrefab(prefab, parent, "Tree_Left_" + (i + 1).ToString("00"), new Vector3(-18f, 0f, zPositions[i]), Quaternion.Euler(0f, 20f * i, 0f));
+            SpawnPrefab(prefab, parent, "Tree_Right_" + (i + 1).ToString("00"), new Vector3(18f, 0f, zPositions[i]), Quaternion.Euler(0f, 180f - 20f * i, 0f));
+        }
+    }
+
+    private static GameObject SpawnPrefab(GameObject prefab, Transform parent, string name, Vector3 position, Quaternion rotation)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        instance.name = name;
+        instance.transform.SetParent(parent);
+        instance.transform.position = position;
+        instance.transform.rotation = rotation;
+        instance.transform.localScale = Vector3.one;
+        ApplyFurnitureTransformPreset(instance.transform);
+        RemoveColliders(instance);
+        EditorUtility.SetDirty(instance);
+        return instance;
+    }
+
+    private static void ApplyPresetsToExistingFurniture()
+    {
+        GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        int changedCount = 0;
+        foreach (GameObject candidate in allObjects)
+        {
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            if (ApplyFurnitureTransformPreset(candidate.transform))
+            {
+                changedCount++;
+                EditorUtility.SetDirty(candidate);
+            }
+        }
+
+        Debug.Log("[KyUcSaiGon] Applied Nguyen Hue street furniture presets to " + changedCount + " objects.");
+    }
+
+    private static bool ApplyFurnitureTransformPreset(Transform target)
+    {
+        string name = target.name;
+        Vector3 position = target.localPosition;
+
+        if (name.StartsWith("Bench_Left_") || name.StartsWith("Bench_Right_"))
+        {
+            position.y = -0.13f;
+            target.localPosition = position;
+            target.localEulerAngles = new Vector3(-90f, 0f, 0f);
+            target.localScale = new Vector3(5f, 5f, 4f);
+            return true;
+        }
+
+        if (name.StartsWith("Lamp_Left_") || name.StartsWith("Lamp_Right_"))
+        {
+            position.y = 2.88f;
+            target.localPosition = position;
+            target.localEulerAngles = new Vector3(-90f, 0f, 100f);
+            target.localScale = new Vector3(5f, 5f, 7f);
+            return true;
+        }
+
+        if (name.StartsWith("Tree_Left_") || name.StartsWith("Tree_Right_"))
+        {
+            position.y = 6.48f;
+            target.localPosition = position;
+            target.localEulerAngles = new Vector3(90f, 0f, 0f);
+            target.localScale = new Vector3(4f, 4f, 4f);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void MoveOldPlaceholders(Transform rejectedRoot)
+    {
+        GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        foreach (GameObject candidate in allObjects)
+        {
+            if (candidate == null || candidate.transform == rejectedRoot || candidate.transform.IsChildOf(rejectedRoot))
+            {
+                continue;
+            }
+
+            string name = candidate.name;
+            bool isOldFurniture = name.StartsWith("REPLACE_Prop_NguyenHue_LeftBench")
+                                  || name.StartsWith("REPLACE_Prop_NguyenHue_RightBench")
+                                  || name.StartsWith("REPLACE_Prop_NguyenHue_LeftPlanter")
+                                  || name.StartsWith("REPLACE_Prop_NguyenHue_RightPlanter")
+                                  || name.StartsWith("REPLACE_Prop_NguyenHue_LeftStreetLight")
+                                  || name.StartsWith("REPLACE_Prop_NguyenHue_RightStreetLight")
+                                  || name == "Visual_REPLACE_PlanterBench";
+
+            if (!isOldFurniture)
+            {
+                continue;
+            }
+
+            candidate.transform.SetParent(rejectedRoot);
+            EditorUtility.SetDirty(candidate);
+        }
+    }
+
+    private static void CreateOrUpdatePrefab(string prefabName, string visualName, string modelPath, string prefabPath)
+    {
+        GameObject model = LoadModelRoot(modelPath);
+        if (model == null)
+        {
+            Debug.Log("[KyUcSaiGon] Original GLB is not imported as an editor model, using runtime glTFast loader: " + modelPath);
+        }
+
+        GameObject prefabRoot = new GameObject(prefabName);
+        GameObject visual = model != null
+            ? (GameObject)PrefabUtility.InstantiatePrefab(model)
+            : InstantiateGlbRuntime(modelPath);
+
+        if (visual == null)
+        {
+            Object.DestroyImmediate(prefabRoot);
+            Debug.LogError("[KyUcSaiGon] Could not build street furniture visual from original GLB: " + modelPath);
+            return;
+        }
+
+        visual.name = visualName;
+        visual.transform.SetParent(prefabRoot.transform);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+        visual.transform.localScale = Vector3.one;
+
+        RemoveRigidbodies(visual);
+        RemoveColliders(visual);
+        RepairBrokenRendererMaterialsOnly(visual, prefabName);
+
+        PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+        Object.DestroyImmediate(prefabRoot);
+    }
+
+    private static GameObject InstantiateGlbRuntime(string modelPath)
+    {
+        if (!File.Exists(modelPath))
+        {
+            Debug.LogError("[KyUcSaiGon] Missing original GLB file: " + modelPath);
+            return null;
+        }
+
+        GameObject visualRoot = new GameObject("RuntimeGLB_Visual");
+        string fullPath = Path.GetFullPath(modelPath).Replace("\\", "/");
+        string url = new Uri(fullPath).AbsoluteUri;
+
+        try
+        {
+            GltfImport gltf = new GltfImport();
+            bool loaded = gltf.Load(url).GetAwaiter().GetResult();
+            if (!loaded)
+            {
+                Object.DestroyImmediate(visualRoot);
+                Debug.LogError("[KyUcSaiGon] glTFast runtime could not load: " + modelPath);
+                return null;
+            }
+
+            bool instantiated = gltf.InstantiateMainSceneAsync(visualRoot.transform).GetAwaiter().GetResult();
+            if (!instantiated)
+            {
+                Object.DestroyImmediate(visualRoot);
+                Debug.LogError("[KyUcSaiGon] glTFast runtime could not instantiate: " + modelPath);
+                return null;
+            }
+
+            return visualRoot;
+        }
+        catch (Exception exception)
+        {
+            Object.DestroyImmediate(visualRoot);
+            Debug.LogError("[KyUcSaiGon] Runtime GLB import failed for " + modelPath + ": " + exception);
+            return null;
+        }
+    }
+
+    private static void QuarantineBrokenConvertedFbx()
+    {
+        string[] fbxPaths =
+        {
+            ModelFolderPath + "/nguyen_hue_street_bench.fbx",
+            ModelFolderPath + "/nguyen_hue_street_lamp.fbx",
+            ModelFolderPath + "/nguyen_hue_street_tree.fbx"
+        };
+
+        foreach (string sourcePath in fbxPaths)
+        {
+            if (!File.Exists(sourcePath))
+            {
+                continue;
+            }
+
+            string targetPath = BrokenFbxRecoveryFolderPath + "/" + Path.GetFileName(sourcePath);
+            if (File.Exists(targetPath))
+            {
+                targetPath = AssetDatabase.GenerateUniqueAssetPath(targetPath);
+            }
+
+            string error = AssetDatabase.MoveAsset(sourcePath, targetPath);
+            if (string.IsNullOrEmpty(error))
+            {
+                Debug.Log("[KyUcSaiGon] Quarantined broken converted FBX: " + targetPath);
+            }
+            else
+            {
+                Debug.LogWarning("[KyUcSaiGon] Could not quarantine " + sourcePath + ": " + error);
+            }
+        }
+    }
+
+    private static void ForceGltfImporterForOriginalGlbs()
+    {
+        Type importerType = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(assembly => assembly.GetType("GLTFast.Editor.GltfImporter"))
+            .FirstOrDefault(type => type != null);
+
+        MethodInfo setImporterOverride = typeof(AssetDatabase)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(method =>
+            {
+                if (method.Name != "SetImporterOverride")
+                {
+                    return false;
+                }
+
+                ParameterInfo[] parameters = method.GetParameters();
+                return parameters.Length == 2
+                       && parameters[0].ParameterType == typeof(string)
+                       && parameters[1].ParameterType == typeof(Type);
+            });
+
+        foreach (string glbPath in new[] { BenchModelPath, LampModelPath, TreeModelPath })
+        {
+            if (!File.Exists(glbPath))
+            {
+                Debug.LogError("[KyUcSaiGon] Missing original GLB: " + glbPath);
+                continue;
+            }
+
+            if (importerType != null && setImporterOverride != null)
+            {
+                try
+                {
+                    setImporterOverride.Invoke(null, new object[] { glbPath, importerType });
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning("[KyUcSaiGon] Could not set glTFast importer override for " + glbPath + ": " + exception.Message);
+                }
+            }
+
+            AssetDatabase.ImportAsset(glbPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        if (importerType == null)
+        {
+            Debug.LogWarning("[KyUcSaiGon] glTFast importer type was not found. Make sure com.unity.cloud.gltfast is installed.");
+        }
+    }
+
+    private static void ForceImportModel(string modelPath)
+    {
+        if (!File.Exists(modelPath))
+        {
+            Debug.LogWarning("[KyUcSaiGon] Missing street furniture model file at " + modelPath);
+            return;
+        }
+
+        AssetDatabase.ImportAsset(modelPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+    }
+
+    private static GameObject LoadModelRoot(string modelPath)
+    {
+        GameObject direct = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+        if (direct != null)
+        {
+            return direct;
+        }
+
+        Object[] subassets = AssetDatabase.LoadAllAssetsAtPath(modelPath);
+        foreach (Object subasset in subassets)
+        {
+            if (subasset is GameObject gameObject)
+            {
+                return gameObject;
+            }
+        }
+
+        return null;
+    }
+
+    private static string DescribeSubassets(string modelPath)
+    {
+        Object[] subassets = AssetDatabase.LoadAllAssetsAtPath(modelPath);
+        if (subassets == null || subassets.Length == 0)
+        {
+            return "none";
+        }
+
+        string description = string.Empty;
+        foreach (Object subasset in subassets)
+        {
+            if (subasset == null)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(description))
+            {
+                description += ", ";
+            }
+
+            description += subasset.GetType().Name + ":" + subasset.name;
+        }
+
+        return description;
+    }
+
+    private static void FitVisualToTarget(GameObject visual, Vector3 targetSize)
+    {
+        Bounds bounds = CalculateWorldBounds(visual);
+        if (bounds.size.x <= 0.0001f || bounds.size.y <= 0.0001f || bounds.size.z <= 0.0001f)
+        {
+            return;
+        }
+
+        float scale = Mathf.Min(targetSize.x / bounds.size.x, targetSize.y / bounds.size.y, targetSize.z / bounds.size.z);
+        visual.transform.localScale = Vector3.one * scale;
+
+        Bounds scaledBounds = CalculateWorldBounds(visual);
+        Vector3 offset = -scaledBounds.center;
+        offset.y = -scaledBounds.min.y;
+        visual.transform.position += offset;
+    }
+
+    private static Bounds CalculateWorldBounds(GameObject root)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+        {
+            return new Bounds(root.transform.position, Vector3.zero);
+        }
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        return bounds;
+    }
+
+    private static void AssignStableProjectMaterials(GameObject visual, string prefabName)
+    {
+        string fallbackPath = prefabName.Contains("Bench")
+            ? MaterialFolderPath + "/M_StreetFurniture_Bench_Wood.mat"
+            : prefabName.Contains("Lamp")
+                ? MaterialFolderPath + "/M_StreetFurniture_Lamp_DarkMetal.mat"
+                : MaterialFolderPath + "/M_StreetFurniture_Tree_Leaves.mat";
+
+        Material fallback = AssetDatabase.LoadAssetAtPath<Material>(fallbackPath);
+        Material trunk = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Tree_Trunk.mat");
+        Material lampGlow = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Lamp_WarmGlow.mat");
+        Renderer[] renderers = visual.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            Material[] materials = renderer.sharedMaterials;
+            if (materials == null || materials.Length == 0)
+            {
+                materials = new Material[] { fallback };
+            }
+
+            for (int i = 0; i < materials.Length; i++)
+            {
+                Material stableMaterial = fallback;
+                string rendererName = renderer.name.ToLowerInvariant();
+                string materialName = materials[i] != null ? materials[i].name.ToLowerInvariant() : string.Empty;
+
+                if (prefabName.Contains("Tree") && trunk != null
+                    && (rendererName.Contains("trunk") || rendererName.Contains("stem") || materialName.Contains("trunk") || materialName.Contains("bark")))
+                {
+                    stableMaterial = trunk;
+                }
+                else if (prefabName.Contains("Lamp") && lampGlow != null
+                         && (rendererName.Contains("light") || rendererName.Contains("bulb") || materialName.Contains("light") || materialName.Contains("glow")))
+                {
+                    stableMaterial = lampGlow;
+                }
+
+                materials[i] = stableMaterial;
+            }
+
+            renderer.sharedMaterials = materials;
+            EditorUtility.SetDirty(renderer);
+        }
+    }
+
+    private static void RepairBrokenRendererMaterialsOnly(GameObject visual, string prefabName)
+    {
+        string fallbackPath = prefabName.Contains("Bench")
+            ? MaterialFolderPath + "/M_StreetFurniture_Bench_Wood.mat"
+            : prefabName.Contains("Lamp")
+                ? MaterialFolderPath + "/M_StreetFurniture_Lamp_DarkMetal.mat"
+                : MaterialFolderPath + "/M_StreetFurniture_Tree_Leaves.mat";
+
+        Material fallback = AssetDatabase.LoadAssetAtPath<Material>(fallbackPath);
+        Renderer[] renderers = visual.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            Material[] materials = renderer.sharedMaterials;
+            if (materials == null || materials.Length == 0)
+            {
+                renderer.sharedMaterials = new Material[] { fallback };
+                EditorUtility.SetDirty(renderer);
+                continue;
+            }
+
+            bool changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                if (materials[i] == null || materials[i].shader == null || materials[i].shader.name == "Hidden/InternalErrorShader")
+                {
+                    materials[i] = fallback;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                renderer.sharedMaterials = materials;
+                EditorUtility.SetDirty(renderer);
+            }
+        }
+    }
+
+    private static void RepairExistingPrefabMaterials()
+    {
+        RepairPrefabMaterials(BenchPrefabPath, "Bench");
+        RepairPrefabMaterials(LampPrefabPath, "Lamp");
+        RepairPrefabMaterials(TreePrefabPath, "Tree");
+    }
+
+    private static void RepairPrefabMaterials(string prefabPath, string furnitureType)
+    {
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+        if (prefabRoot == null)
+        {
+            return;
+        }
+
+        AssignStableProjectMaterials(prefabRoot, furnitureType);
+        PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+        PrefabUtility.UnloadPrefabContents(prefabRoot);
+    }
+
+    private static void RepairExistingFurnitureMaterialsInScene()
+    {
+        GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        int repairedCount = 0;
+        foreach (GameObject candidate in allObjects)
+        {
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            string type = string.Empty;
+            if (candidate.name.StartsWith("Bench_Left_") || candidate.name.StartsWith("Bench_Right_"))
+            {
+                type = "Bench";
+            }
+            else if (candidate.name.StartsWith("Lamp_Left_") || candidate.name.StartsWith("Lamp_Right_"))
+            {
+                type = "Lamp";
+            }
+            else if (candidate.name.StartsWith("Tree_Left_") || candidate.name.StartsWith("Tree_Right_"))
+            {
+                type = "Tree";
+            }
+
+            if (string.IsNullOrEmpty(type))
+            {
+                continue;
+            }
+
+            AssignStableProjectMaterials(candidate, type);
+            EditorUtility.SetDirty(candidate);
+            repairedCount++;
+        }
+
+        Debug.Log("[KyUcSaiGon] Repaired Nguyen Hue street furniture materials on " + repairedCount + " scene objects.");
+    }
+
+    public static void RestorePrimitiveFurnitureFallbacks()
+    {
+        Transform furnitureRoot = FindOrCreateScenePath("SceneBlockoutRoot/NguyenHue_EnvironmentRoot/StreetFurniture");
+        Transform benchesRoot = ResetChild(furnitureRoot, "Benches");
+        Transform lampsRoot = ResetChild(furnitureRoot, "Lamps");
+        Transform treesRoot = ResetChild(furnitureRoot, "Trees");
+        Transform rejectedRoot = FindOrCreateChild(furnitureRoot, "RejectedOrOld_Placeholders");
+        rejectedRoot.gameObject.SetActive(false);
+
+        CreatePrimitiveBenchRows(benchesRoot);
+        CreatePrimitiveLampRows(lampsRoot);
+        CreatePrimitiveTreeRows(treesRoot);
+
+        EditorUtility.SetDirty(furnitureRoot);
+    }
+
+    private static void CreatePrimitiveBenchRows(Transform parent)
+    {
+        float[] zPositions = { -34f, -20f, -6f, 18f, 32f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            CreatePrimitiveBench(parent, "Bench_Left_" + (i + 1).ToString("00"), new Vector3(-15.2f, 0f, zPositions[i]), 90f);
+            CreatePrimitiveBench(parent, "Bench_Right_" + (i + 1).ToString("00"), new Vector3(15.2f, 0f, zPositions[i]), -90f);
+        }
+    }
+
+    private static void CreatePrimitiveLampRows(Transform parent)
+    {
+        float[] zPositions = { -42f, -32f, -22f, -12f, 0f, 12f, 24f, 36f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            CreatePrimitiveLamp(parent, "Lamp_Left_" + (i + 1).ToString("00"), new Vector3(-12.4f, 0f, zPositions[i]));
+            CreatePrimitiveLamp(parent, "Lamp_Right_" + (i + 1).ToString("00"), new Vector3(12.4f, 0f, zPositions[i]));
+        }
+    }
+
+    private static void CreatePrimitiveTreeRows(Transform parent)
+    {
+        float[] zPositions = { -38f, -26f, -14f, 0f, 14f, 28f, 38f };
+        for (int i = 0; i < zPositions.Length; i++)
+        {
+            CreatePrimitiveTree(parent, "Tree_Left_" + (i + 1).ToString("00"), new Vector3(-18f, 0f, zPositions[i]), 20f * i);
+            CreatePrimitiveTree(parent, "Tree_Right_" + (i + 1).ToString("00"), new Vector3(18f, 0f, zPositions[i]), 180f - 20f * i);
+        }
+    }
+
+    private static void CreatePrimitiveBench(Transform parent, string name, Vector3 position, float yaw)
+    {
+        Material wood = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Bench_Wood.mat");
+        Material concrete = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Concrete.mat");
+        GameObject root = CreateRoot(parent, name, position, Quaternion.Euler(0f, yaw, 0f));
+
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cube, "Visual_REPLACE_NguyenHue_StreetBench_Seat", new Vector3(0f, 0.42f, 0f), Vector3.zero, new Vector3(2.6f, 0.22f, 0.75f), wood);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cube, "Visual_REPLACE_NguyenHue_StreetBench_Back", new Vector3(0f, 0.82f, 0.32f), new Vector3(-12f, 0f, 0f), new Vector3(2.6f, 0.18f, 0.8f), wood);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cube, "Visual_REPLACE_NguyenHue_StreetBench_LeftLeg", new Vector3(-0.9f, 0.2f, -0.18f), Vector3.zero, new Vector3(0.18f, 0.4f, 0.18f), concrete);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cube, "Visual_REPLACE_NguyenHue_StreetBench_RightLeg", new Vector3(0.9f, 0.2f, -0.18f), Vector3.zero, new Vector3(0.18f, 0.4f, 0.18f), concrete);
+    }
+
+    private static void CreatePrimitiveLamp(Transform parent, string name, Vector3 position)
+    {
+        Material metal = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Lamp_DarkMetal.mat");
+        Material glow = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Lamp_WarmGlow.mat");
+        GameObject root = CreateRoot(parent, name, position, Quaternion.identity);
+
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cylinder, "Visual_REPLACE_NguyenHue_StreetLamp_Pole", new Vector3(0f, 1.9f, 0f), Vector3.zero, new Vector3(0.12f, 1.9f, 0.12f), metal);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cylinder, "Visual_REPLACE_NguyenHue_StreetLamp_Head", new Vector3(0f, 3.9f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.45f, 0.12f, 0.45f), metal);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Sphere, "Visual_REPLACE_NguyenHue_StreetLamp_Glow", new Vector3(0f, 3.72f, 0f), Vector3.zero, new Vector3(0.42f, 0.2f, 0.42f), glow);
+
+        GameObject lightObject = new GameObject("Visual_REPLACE_NguyenHue_StreetLamp_PointLight");
+        lightObject.transform.SetParent(root.transform);
+        lightObject.transform.localPosition = new Vector3(0f, 3.6f, 0f);
+        lightObject.transform.localRotation = Quaternion.identity;
+        lightObject.transform.localScale = Vector3.one;
+
+        Light light = lightObject.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.color = new Color(1f, 0.74f, 0.38f);
+        light.intensity = 0.75f;
+        light.range = 5f;
+    }
+
+    private static void CreatePrimitiveTree(Transform parent, string name, Vector3 position, float yaw)
+    {
+        Material trunk = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Tree_Trunk.mat");
+        Material leaves = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolderPath + "/M_StreetFurniture_Tree_Leaves.mat");
+        GameObject root = CreateRoot(parent, name, position, Quaternion.Euler(0f, yaw, 0f));
+
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Cylinder, "Visual_REPLACE_NguyenHue_StreetTree_Trunk", new Vector3(0f, 1.8f, 0f), Vector3.zero, new Vector3(0.34f, 1.8f, 0.34f), trunk);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Sphere, "Visual_REPLACE_NguyenHue_StreetTree_Canopy_Main", new Vector3(0f, 4.15f, 0f), Vector3.zero, new Vector3(3f, 1.15f, 2.4f), leaves);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Sphere, "Visual_REPLACE_NguyenHue_StreetTree_Canopy_Left", new Vector3(-1.1f, 3.55f, 0.1f), Vector3.zero, new Vector3(2.15f, 0.85f, 1.65f), leaves);
+        CreatePrimitiveVisual(root.transform, PrimitiveType.Sphere, "Visual_REPLACE_NguyenHue_StreetTree_Canopy_Right", new Vector3(1.1f, 3.55f, -0.1f), Vector3.zero, new Vector3(2.15f, 0.85f, 1.65f), leaves);
+    }
+
+    private static GameObject CreateRoot(Transform parent, string name, Vector3 position, Quaternion rotation)
+    {
+        GameObject root = new GameObject(name);
+        root.transform.SetParent(parent);
+        root.transform.position = position;
+        root.transform.rotation = rotation;
+        root.transform.localScale = Vector3.one;
+        return root;
+    }
+
+    private static GameObject CreatePrimitiveVisual(Transform parent, PrimitiveType type, string name, Vector3 localPosition, Vector3 localEulerAngles, Vector3 localScale, Material material)
+    {
+        GameObject visual = GameObject.CreatePrimitive(type);
+        visual.name = name;
+        visual.transform.SetParent(parent);
+        visual.transform.localPosition = localPosition;
+        visual.transform.localEulerAngles = localEulerAngles;
+        visual.transform.localScale = localScale;
+
+        Renderer renderer = visual.GetComponent<Renderer>();
+        if (renderer != null && material != null)
+        {
+            renderer.sharedMaterial = material;
+        }
+
+        Collider collider = visual.GetComponent<Collider>();
+        if (collider != null)
+        {
+            Object.DestroyImmediate(collider);
+        }
+
+        return visual;
+    }
+
+    private static void CreateFallbackMaterials()
+    {
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Bench_Wood.mat", new Color(0.55f, 0.32f, 0.17f), 0.35f);
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Concrete.mat", new Color(0.48f, 0.47f, 0.44f), 0.28f);
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Lamp_DarkMetal.mat", new Color(0.035f, 0.038f, 0.042f), 0.45f);
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Lamp_WarmGlow.mat", new Color(1f, 0.72f, 0.28f), 0.2f);
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Tree_Trunk.mat", new Color(0.28f, 0.16f, 0.08f), 0.28f);
+        CreateMaterial(MaterialFolderPath + "/M_StreetFurniture_Tree_Leaves.mat", new Color(0.25f, 0.48f, 0.18f), 0.28f);
+    }
+
+    private static void CreateMaterial(string path, Color color, float smoothness)
+    {
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (material == null)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, path);
+        }
+
+        SetColor(material, "_BaseColor", color);
+        SetColor(material, "_Color", color);
+        SetFloat(material, "_Metallic", 0f);
+        SetFloat(material, "_Smoothness", smoothness);
+        EditorUtility.SetDirty(material);
+    }
+
+    private static Transform ResetChild(Transform parent, string childName)
+    {
+        Transform existing = parent.Find(childName);
+        if (existing != null)
+        {
+            Object.DestroyImmediate(existing.gameObject);
+        }
+
+        return FindOrCreateChild(parent, childName);
+    }
+
+    private static Transform FindOrCreateScenePath(string path)
+    {
+        string[] names = path.Split('/');
+        Transform current = null;
+        foreach (string name in names)
+        {
+            if (current == null)
+            {
+                GameObject root = GameObject.Find(name);
+                if (root == null)
+                {
+                    root = new GameObject(name);
+                }
+
+                current = root.transform;
+            }
+            else
+            {
+                current = FindOrCreateChild(current, name);
+            }
+        }
+
+        return current;
+    }
+
+    private static GameObject FindRootChildInScene(Scene scene, string path)
+    {
+        string[] names = path.Split('/');
+        if (names.Length == 0)
+        {
+            return null;
+        }
+
+        GameObject current = null;
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            if (root.name == names[0])
+            {
+                current = root;
+                break;
+            }
+        }
+
+        if (current == null)
+        {
+            return null;
+        }
+
+        for (int i = 1; i < names.Length; i++)
+        {
+            Transform child = current.transform.Find(names[i]);
+            if (child == null)
+            {
+                return null;
+            }
+
+            current = child.gameObject;
+        }
+
+        return current;
+    }
+
+    private static void RemoveCloneSuffix(Transform root)
+    {
+        if (root.name.EndsWith("(Clone)"))
+        {
+            root.name = root.name.Replace("(Clone)", string.Empty).TrimEnd();
+        }
+
+        foreach (Transform child in root)
+        {
+            RemoveCloneSuffix(child);
+        }
+    }
+
+    private static Transform FindOrCreateChild(Transform parent, string childName)
+    {
+        Transform child = parent.Find(childName);
+        if (child != null)
+        {
+            return child;
+        }
+
+        GameObject childObject = new GameObject(childName);
+        child = childObject.transform;
+        child.SetParent(parent);
+        child.localPosition = Vector3.zero;
+        child.localRotation = Quaternion.identity;
+        child.localScale = Vector3.one;
+        return child;
+    }
+
+    private static void RemoveRigidbodies(GameObject root)
+    {
+        Rigidbody[] rigidbodies = root.GetComponentsInChildren<Rigidbody>(true);
+        foreach (Rigidbody rigidbody in rigidbodies)
+        {
+            Object.DestroyImmediate(rigidbody);
+        }
+    }
+
+    private static void RemoveColliders(GameObject root)
+    {
+        Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+        {
+            Object.DestroyImmediate(collider);
+        }
+    }
+
+    private static void EnsureFolder(string parentPath, string folderName)
+    {
+        string folderPath = parentPath + "/" + folderName;
+        if (!AssetDatabase.IsValidFolder(folderPath))
+        {
+            AssetDatabase.CreateFolder(parentPath, folderName);
+        }
+    }
+
+    private static void SetColor(Material material, string propertyName, Color value)
+    {
+        if (material.HasProperty(propertyName))
+        {
+            material.SetColor(propertyName, value);
+        }
+    }
+
+    private static void SetFloat(Material material, string propertyName, float value)
+    {
+        if (material.HasProperty(propertyName))
+        {
+            material.SetFloat(propertyName, value);
+        }
+    }
+}
+#endif

@@ -31,6 +31,8 @@ public class UIManager : MonoBehaviour
     private PuzzleInteractable activePuzzle;
     private readonly int[] stepperValues = new int[3];
     private readonly Button[] stepperValueButtons = new Button[3];
+    private int selectedStepperIndex;
+    private float nextStepperKeyboardTime;
 
     private void Awake()
     {
@@ -126,6 +128,7 @@ public class UIManager : MonoBehaviour
         puzzleDescriptionText.text = puzzle.puzzleDescription;
         puzzleInput.text = string.Empty;
         puzzleInput.placeholder.GetComponent<Text>().text = puzzle.inputHint;
+        puzzleInput.interactable = !puzzle.useThreeValueStepper;
         puzzleFeedbackText.text = string.Empty;
 
         ClearQuickChoices();
@@ -157,8 +160,11 @@ public class UIManager : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        puzzleInput.Select();
-        puzzleInput.ActivateInputField();
+        if (puzzleInput.interactable)
+        {
+            puzzleInput.Select();
+            puzzleInput.ActivateInputField();
+        }
     }
 
     public void SubmitPuzzle()
@@ -183,6 +189,11 @@ public class UIManager : MonoBehaviour
         if (puzzlePanel != null)
         {
             puzzlePanel.SetActive(false);
+        }
+
+        if (puzzleInput != null)
+        {
+            puzzleInput.interactable = true;
         }
 
         activePuzzle = null;
@@ -268,15 +279,18 @@ public class UIManager : MonoBehaviour
 
             Button decrease = Instantiate(quickChoiceButtonPrefab, quickChoiceRoot);
             decrease.gameObject.SetActive(true);
-            decrease.GetComponentInChildren<Text>().text = "-";
+            SetButtonText(decrease, "<");
+            TintStepperButton(decrease, index, false);
             decrease.onClick.AddListener(() => AdjustStepperValue(capturedIndex, -1));
 
             Button increase = Instantiate(quickChoiceButtonPrefab, quickChoiceRoot);
             increase.gameObject.SetActive(true);
             stepperValueButtons[index] = increase;
+            TintStepperButton(increase, index, true);
             increase.onClick.AddListener(() => AdjustStepperValue(capturedIndex, 1));
         }
 
+        selectedStepperIndex = 0;
         RefreshStepperInput(puzzle);
     }
 
@@ -304,7 +318,8 @@ public class UIManager : MonoBehaviour
             string label = puzzle.stepperLabels != null && index < puzzle.stepperLabels.Length
                 ? puzzle.stepperLabels[index]
                 : "Value " + (index + 1);
-            stepperValueButtons[index].GetComponentInChildren<Text>().text = label + ": " + stepperValues[index] + " +";
+            string selector = index == selectedStepperIndex ? "* " : string.Empty;
+            SetButtonText(stepperValueButtons[index], selector + label + "\n" + stepperValues[index] + " >");
         }
     }
 
@@ -319,6 +334,54 @@ public class UIManager : MonoBehaviour
         {
             SubmitPuzzle();
             return;
+        }
+
+        if (activePuzzle != null && activePuzzle.useThreeValueStepper)
+        {
+            string digit = GameInput.PressedPuzzleToken();
+            if (!string.IsNullOrEmpty(digit) && int.TryParse(digit, out int digitValue))
+            {
+                stepperValues[selectedStepperIndex] = Mathf.Clamp(digitValue, 0, 9);
+                selectedStepperIndex = (selectedStepperIndex + 1) % stepperValues.Length;
+                RefreshStepperInput(activePuzzle);
+                return;
+            }
+
+            Vector2 move = GameInput.Move;
+            if (Time.unscaledTime < nextStepperKeyboardTime)
+            {
+                return;
+            }
+
+            if (move.x < -0.5f)
+            {
+                selectedStepperIndex = (selectedStepperIndex + stepperValues.Length - 1) % stepperValues.Length;
+                nextStepperKeyboardTime = Time.unscaledTime + 0.18f;
+                RefreshStepperInput(activePuzzle);
+                return;
+            }
+
+            if (move.x > 0.5f)
+            {
+                selectedStepperIndex = (selectedStepperIndex + 1) % stepperValues.Length;
+                nextStepperKeyboardTime = Time.unscaledTime + 0.18f;
+                RefreshStepperInput(activePuzzle);
+                return;
+            }
+
+            if (move.y > 0.5f)
+            {
+                nextStepperKeyboardTime = Time.unscaledTime + 0.14f;
+                AdjustStepperValue(selectedStepperIndex, 1);
+                return;
+            }
+
+            if (move.y < -0.5f)
+            {
+                nextStepperKeyboardTime = Time.unscaledTime + 0.14f;
+                AdjustStepperValue(selectedStepperIndex, -1);
+                return;
+            }
         }
 
         if (GameInput.BackspacePressed && !string.IsNullOrEmpty(puzzleInput.text))
@@ -343,6 +406,46 @@ public class UIManager : MonoBehaviour
         {
             puzzleInput.text += "-" + token;
         }
+    }
+
+    private void SetButtonText(Button button, string text)
+    {
+        Text label = button != null ? button.GetComponentInChildren<Text>() : null;
+        if (label != null)
+        {
+            label.text = text;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.fontSize = Mathf.Max(label.fontSize, 18);
+        }
+    }
+
+    private void TintStepperButton(Button button, int index, bool isValueButton)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Color color = Color.white;
+        if (index == 0)
+        {
+            color = new Color(0.9f, 0.18f, 0.14f);
+        }
+        else if (index == 1)
+        {
+            color = new Color(0.12f, 0.72f, 0.28f);
+        }
+        else if (index == 2)
+        {
+            color = new Color(1f, 0.78f, 0.12f);
+        }
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = isValueButton ? color : Color.Lerp(color, Color.black, 0.18f);
+        colors.highlightedColor = Color.Lerp(color, Color.white, 0.15f);
+        colors.pressedColor = Color.Lerp(color, Color.black, 0.35f);
+        colors.selectedColor = colors.highlightedColor;
+        button.colors = colors;
     }
 
     private void UnlockCursorIfNoPanel()

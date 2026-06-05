@@ -1,0 +1,42 @@
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+public static class CodexSyncNguyenHueStreetFurnitureScale
+{
+    private const string ScenePath = "Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity";
+
+    public static void Run()
+    {
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var streetFurniture = GameObject.Find("StreetFurniture");
+        if (streetFurniture == null)
+        {
+            throw new MissingReferenceException("Cannot find StreetFurniture root.");
+        }
+
+        var changed = 0;
+        foreach (var transform in streetFurniture.GetComponentsInChildren<Transform>(true))
+        {
+            if (transform.name.StartsWith("Tree_"))
+            {
+                transform.localScale = new Vector3(7f, 8f, 8f);
+                changed++;
+            }
+            else if (transform.name.StartsWith("Lamp_"))
+            {
+                transform.localScale = new Vector3(2f, 2f, 1.5f);
+                changed++;
+            }
+            else if (transform.name.StartsWith("Bench_"))
+            {
+                transform.localScale = new Vector3(2f, 2f, 2f);
+                changed++;
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log($"[KyUcSaiGon] Synced Nguyen Hue street furniture scale on {changed} objects.");
+    }
+}

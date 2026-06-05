@@ -53,6 +53,42 @@ public class GameProgressManager : MonoBehaviour
         return progress != null && progress.restored;
     }
 
+    public bool IsRouteUnlocked(string locationId)
+    {
+        if (Enum.TryParse(locationId, out LocationId parsedLocationId))
+        {
+            return IsRouteUnlocked(parsedLocationId);
+        }
+
+        return false;
+    }
+
+    public bool IsRouteUnlocked(LocationId locationId)
+    {
+        if (DeveloperMode.IsEnabled || developerMode)
+        {
+            return true;
+        }
+
+        switch (locationId)
+        {
+            case LocationId.NguyenHue:
+                return true;
+            case LocationId.BenThanh:
+                return IsRestored(LocationId.NguyenHue);
+            case LocationId.DinhDocLap:
+                return IsRestored(LocationId.BenThanh);
+            case LocationId.NhaThoDucBa:
+                return IsRestored(LocationId.DinhDocLap);
+            case LocationId.Bitexco:
+                return IsRestored(LocationId.NhaThoDucBa);
+            case LocationId.BachDang:
+                return IsRestored(LocationId.Bitexco);
+            default:
+                return false;
+        }
+    }
+
     public void MarkLocationRestored(LocationId locationId, string fragmentName)
     {
         LocationProgress progress = GetLocationProgress(locationId);

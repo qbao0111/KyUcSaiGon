@@ -4,36 +4,7 @@ using UnityEngine.SceneManagement;
 
 public class BusHubRouteBoardController : MonoBehaviour
 {
-    private struct RouteData
-    {
-        public string objectName;
-        public string displayName;
-        public string subtitle;
-        public LocationId locationId;
-        public string sceneName;
-        public Vector3 localPosition;
-
-        public RouteData(string objectName, string displayName, string subtitle, LocationId locationId, string sceneName, Vector3 localPosition)
-        {
-            this.objectName = objectName;
-            this.displayName = displayName;
-            this.subtitle = subtitle;
-            this.locationId = locationId;
-            this.sceneName = sceneName;
-            this.localPosition = localPosition;
-        }
-    }
-
-    private static readonly RouteData[] Routes =
-    {
-        new RouteData("RouteButton_NguyenHue", "Nguyễn Huệ", "Nhịp sống trẻ", LocationId.NguyenHue, SceneLoader.NguyenHue, new Vector3(-1.95f, 3.6f, 14.28f)),
-        new RouteData("RouteButton_BenThanh", "Chợ Bến Thành", "Đời sống thường ngày", LocationId.BenThanh, SceneLoader.BenThanh, new Vector3(0.5f, 3.6f, 14.28f)),
-        new RouteData("RouteButton_DinhDocLap", "Dinh Độc Lập", "Lịch sử", LocationId.DinhDocLap, SceneLoader.DinhDocLap, new Vector3(2.95f, 3.6f, 14.28f)),
-        new RouteData("RouteButton_NhaThoDucBa", "Nhà thờ\nĐức Bà", "Bình yên", LocationId.NhaThoDucBa, SceneLoader.NhaThoDucBa, new Vector3(-1.95f, 2.35f, 14.28f)),
-        new RouteData("RouteButton_Bitexco", "Bitexco", "Chuyển mình", LocationId.Bitexco, SceneLoader.Bitexco, new Vector3(0.5f, 2.35f, 14.28f)),
-        new RouteData("RouteButton_BachDang", "Bến Bạch\nĐằng", "Dòng chảy thành phố", LocationId.BachDang, SceneLoader.BachDang, new Vector3(2.95f, 2.35f, 14.28f))
-    };
-
+    private const string WorldBoardRootName = "BusHubWorldBoardRoot";
     private bool endingStarted;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -83,7 +54,7 @@ public class BusHubRouteBoardController : MonoBehaviour
             boardCollider = gameObject.AddComponent<BoxCollider>();
         }
 
-        boardCollider.center = new Vector3(0.5f, 2.9f, 14.25f) - transform.position;
+        boardCollider.center = transform.InverseTransformPoint(new Vector3(0.5f, 2.9f, 14.25f));
         boardCollider.size = new Vector3(8.4f, 4.7f, 1.1f);
 
         BusHubMapUIController routeMapUI = FindObjectOfType<BusHubMapUIController>();
@@ -103,90 +74,112 @@ public class BusHubRouteBoardController : MonoBehaviour
 
     private void RebuildBoard()
     {
-        RemoveGeneratedButtons();
-
-        foreach (RouteData route in Routes)
-        {
-            CreateRouteButton(transform, route);
-        }
-
-        CreateDeveloperTools();
-        PrototypeLogger.Info("BusHub route board rebuilt: 6 memory routes + separated dev tools.");
+        RemoveOldWorldRouteVisuals();
+        RemoveStaleBoardTexts();
+        CreateBlankPanoramaBoard();
+        PrototypeLogger.Info("BusHub physical board is now a blank HCM panorama placeholder. Press E opens the paper map UI.");
     }
 
-    private void RemoveGeneratedButtons()
+    private void RemoveOldWorldRouteVisuals()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             Transform child = transform.GetChild(i);
-            if (child.name.StartsWith("RouteButton_") || child.name == "DevToolsRoot")
+            if (child.name.StartsWith("RouteButton_")
+                || child.name == "DevToolsRoot"
+                || child.name == WorldBoardRootName)
             {
                 Destroy(child.gameObject);
             }
         }
     }
 
-    private void CreateDeveloperTools()
+    private void RemoveStaleBoardTexts()
     {
-        GameObject devRoot = new GameObject("DevToolsRoot");
-        devRoot.transform.SetParent(transform);
-        devRoot.transform.localPosition = Vector3.zero;
-        devRoot.transform.localRotation = Quaternion.identity;
-        devRoot.transform.localScale = Vector3.one;
-
-        GameObject devButton = CreateButtonRoot(devRoot.transform, "DevButton_Ending", new Vector3(0.5f, 1.25f, 14.28f), new Vector3(2.8f, 0.75f, 0.35f), new Color(0.35f, 0.45f, 0.95f));
-        devButton.SetActive(DeveloperMode.IsEnabled);
-        CreateButtonText(devButton.transform, "DEV: Ending");
+        TextMesh[] textMeshes = GetComponentsInChildren<TextMesh>(true);
+        foreach (TextMesh textMesh in textMeshes)
+        {
+            if (IsRedundantBoardText(textMesh.text))
+            {
+                Destroy(textMesh.gameObject);
+            }
+        }
     }
 
-    private void CreateRouteButton(Transform parent, RouteData route)
+    private bool IsRedundantBoardText(string text)
     {
-        GameObject button = CreateButtonRoot(parent, route.objectName, route.localPosition, new Vector3(2.25f, 0.85f, 0.35f), new Color(1f, 0.87f, 0.08f));
-        CreateButtonText(button.transform, route.displayName);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Bảng lộ trình")
+            || text.Contains("Chọn địa điểm")
+            || text.Contains("Nhấn E để mở")
+            || text.Contains("Nhan E de mo");
     }
 
-    private GameObject CreateButtonRoot(Transform parent, string objectName, Vector3 localPosition, Vector3 size, Color color)
+    private void CreateBlankPanoramaBoard()
     {
-        GameObject button = new GameObject(objectName);
-        button.transform.SetParent(parent);
-        button.transform.localPosition = localPosition;
-        button.transform.localRotation = Quaternion.identity;
-        button.transform.localScale = Vector3.one;
+        GameObject boardRoot = new GameObject(WorldBoardRootName);
+        boardRoot.transform.SetParent(transform);
+        boardRoot.transform.localPosition = Vector3.zero;
+        boardRoot.transform.localRotation = Quaternion.identity;
+        boardRoot.transform.localScale = Vector3.one;
 
-        BoxCollider collider = button.AddComponent<BoxCollider>();
-        collider.enabled = false;
-        collider.size = size + new Vector3(0.25f, 0.25f, 0.35f);
-        new GameObject("Collider").transform.SetParent(button.transform);
+        CreateCube(boardRoot.transform, "BlankPanoramaPanel", new Vector3(0.5f, 2.95f, 14.2f), new Vector3(8.25f, 3.85f, 0.16f), new Color(0.035f, 0.04f, 0.045f));
 
-        GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        visual.name = "Visual_REPLACE_" + objectName;
-        visual.transform.SetParent(button.transform);
-        visual.transform.localPosition = Vector3.zero;
-        visual.transform.localRotation = Quaternion.identity;
-        visual.transform.localScale = size;
-        Destroy(visual.GetComponent<Collider>());
+        GameObject borderRoot = new GameObject("BoardGoldBorder");
+        borderRoot.transform.SetParent(boardRoot.transform);
+        borderRoot.transform.localPosition = Vector3.zero;
+        borderRoot.transform.localRotation = Quaternion.identity;
+        borderRoot.transform.localScale = Vector3.one;
 
-        Renderer renderer = visual.GetComponent<Renderer>();
+        Color gold = new Color(1f, 0.58f, 0.12f);
+        CreateCube(borderRoot.transform, "Border_Top", new Vector3(0.5f, 4.94f, 14.02f), new Vector3(8.55f, 0.16f, 0.08f), gold, true);
+        CreateCube(borderRoot.transform, "Border_Bottom", new Vector3(0.5f, 0.99f, 14.02f), new Vector3(8.55f, 0.16f, 0.08f), gold, true);
+        CreateCube(borderRoot.transform, "Border_Left", new Vector3(-3.85f, 2.95f, 14.02f), new Vector3(0.16f, 4f, 0.08f), gold, true);
+        CreateCube(borderRoot.transform, "Border_Right", new Vector3(4.85f, 2.95f, 14.02f), new Vector3(0.16f, 4f, 0.08f), gold, true);
+
+        CreateBoardText(boardRoot.transform, "PlaceholderText", "Ảnh toàn cảnh TP.HCM", new Vector3(0.5f, 2.95f, 13.98f), 0.14f, new Color(1f, 0.72f, 0.32f));
+    }
+
+    private GameObject CreateCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color, bool emissive = false)
+    {
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.name = name;
+        cube.transform.SetParent(parent);
+        cube.transform.localPosition = localPosition;
+        cube.transform.localRotation = Quaternion.identity;
+        cube.transform.localScale = localScale;
+        Destroy(cube.GetComponent<Collider>());
+
+        Renderer renderer = cube.GetComponent<Renderer>();
+        renderer.material = CreateMaterial(color, emissive);
+        return cube;
+    }
+
+    private Material CreateMaterial(Color color, bool emissive)
+    {
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null)
         {
             shader = Shader.Find("Standard");
         }
 
-        renderer.material = new Material(shader);
-        renderer.material.color = color;
-        renderer.material.EnableKeyword("_EMISSION");
-        renderer.material.SetColor("_EmissionColor", color * 1.15f);
+        Material material = new Material(shader);
+        material.color = color;
 
-        return button;
+        if (emissive)
+        {
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", color * 1.2f);
+        }
+
+        return material;
     }
 
-    private void CreateButtonText(Transform parent, string title)
-    {
-        CreateText(parent, "TitleText", title, new Vector3(0f, 0f, -0.23f), 0.055f);
-    }
-
-    private TextMesh CreateText(Transform parent, string name, string text, Vector3 localPosition, float characterSize)
+    private TextMesh CreateBoardText(Transform parent, string name, string text, Vector3 localPosition, float characterSize, Color color)
     {
         GameObject textObject = new GameObject(name);
         textObject.transform.SetParent(parent);
@@ -199,8 +192,8 @@ public class BusHubRouteBoardController : MonoBehaviour
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
         textMesh.characterSize = characterSize;
-        textMesh.fontSize = 36;
-        textMesh.color = Color.white;
+        textMesh.fontSize = 48;
+        textMesh.color = color;
         return textMesh;
     }
 

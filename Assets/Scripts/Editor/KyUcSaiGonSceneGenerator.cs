@@ -349,9 +349,9 @@ public static class KyUcSaiGonSceneGenerator
         CreateNguyenHueFountain(landmark);
         CreateNguyenHueMusician(npcRoot, tutorial);
         CreateNguyenHueSpeakerPuzzle(puzzleRoot, zone);
-        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Bass_Red_1", "LED đỏ nhấp nháy số 1. Đây là Bass.", "BASS = 1", new Vector3(-22, 5f, -34), new Vector3(4.5f, 8f, 0.8f), Color.red);
-        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Mid_Green_6", "LED xanh lá nhấp nháy số 6. Đây là Mid.", "MID = 6", new Vector3(22, 5f, -2), new Vector3(4.5f, 8f, 0.8f), new Color(0.1f, 1f, 0.35f));
-        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Treble_Gold_8", "LED vàng nhấp nháy số 8. Đây là Treble.", "TREBLE = 8", new Vector3(9, 5f, 21), new Vector3(4.8f, 8.2f, 0.8f), new Color(1f, 0.82f, 0.15f));
+        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Bass_Red_1", "LED đỏ nhấp nháy số 1. Đây là Bass.", "BASS", "1", new Vector3(-22, 5f, -34), new Vector3(4.5f, 8f, 0.8f), Color.red);
+        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Mid_Green_6", "LED xanh lá nhấp nháy số 6. Đây là Mid.", "MID", "6", new Vector3(22, 5f, -2), new Vector3(4.5f, 8f, 0.8f), new Color(0.1f, 1f, 0.35f));
+        CreateNguyenHueLedHint(environment, tutorial, "REPLACE_LEDHint_Treble_Gold_8", "LED vàng nhấp nháy số 8. Đây là Treble.", "TREBLE", "8", new Vector3(9, 5f, 21), new Vector3(4.8f, 8.2f, 0.8f), new Color(1f, 0.82f, 0.15f));
         CreateNguyenHueBusStop(busStopRoot, zone);
         CreateNguyenHueLedGuides(environment);
         AddNguyenHueRestoreEffects(zone, roots.transform, effectsRoot);
@@ -436,28 +436,28 @@ public static class KyUcSaiGonSceneGenerator
         GameObject puzzle = CreateReplaceablePrimitiveRoot(parent, PrimitiveType.Cube, "REPLACE_Puzzle_SpeakerMixer", new Vector3(-10, 1, -9), new Vector3(3.5f, 2, 2.6f), PuzzleYellow, true);
         PuzzleInteractable interactable = puzzle.AddComponent<PuzzleInteractable>();
         interactable.memoryZone = zone;
-        interactable.puzzleTitle = "Loa phố đi bộ";
-        interactable.puzzleDescription = "Chỉnh Bass - Mid - Treble theo ba màn hình LED.";
+        interactable.puzzleTitle = "Bộ điều chỉnh âm thanh";
+        interactable.puzzleDescription = "Tìm 3 con số trên các màn hình LED quanh khu vực, rồi chỉnh Bass - Mid - Treble.";
         interactable.correctAnswer = "1-6-8";
         interactable.inputHint = "Bass - Mid - Treble";
         interactable.useThreeValueStepper = true;
-        interactable.wrongFeedback = "Chưa đúng. Hãy kiểm tra lại ba màn hình LED.";
+        interactable.wrongFeedback = "Tổ hợp chưa đúng. Âm thanh vẫn chưa khớp.";
         interactable.correctFeedback = "Đúng rồi. Âm nhạc đang trở lại.";
         AddGlowLight("GLOW_Puzzle_SpeakerMixer", puzzle.transform, puzzle.transform.position + Vector3.up * 1.1f, PuzzleYellow, 7f, 2.8f);
         CreateWorldLabel("Loa bị nhiễu", puzzle.transform, new Vector3(-10, 3.4f, -9), 0.4f);
     }
 
-    private static void CreateNguyenHueLedHint(Transform parent, NguyenHueTutorialController tutorial, string name, string message, string ledText, Vector3 position, Vector3 scale, Color color)
+    private static void CreateNguyenHueLedHint(Transform parent, NguyenHueTutorialController tutorial, string name, string message, string ledText, string ledNumber, Vector3 position, Vector3 scale, Color color)
     {
         GameObject hint = CreateReplaceablePrimitiveRoot(parent, PrimitiveType.Cube, name, position, scale, color, true);
         LEDHintInteractable interactable = hint.AddComponent<LEDHintInteractable>();
         interactable.hintMessage = message;
         interactable.tutorialController = tutorial;
+        interactable.ConfigureDisplay(ledText, ledNumber, color);
         Renderer renderer = hint.GetComponentInChildren<Renderer>();
         renderer.material.EnableKeyword("_EMISSION");
         renderer.material.SetColor("_EmissionColor", color * 2.2f);
         AddGlowLight("GLOW_" + name, hint.transform, position + new Vector3(0, 1.4f, 0), color, 12f, 2.8f);
-        CreateWorldLabel(ledText, hint.transform, position + new Vector3(0, 4.8f, -0.55f), 0.7f, false);
     }
 
     private static void CreateNguyenHueLedGuides(Transform parent)

@@ -1,0 +1,33 @@
+#if UNITY_EDITOR
+using UnityEditor;
+
+[InitializeOnLoad]
+public static class CodexNguyenHueFurnitureRestoreRunner
+{
+    static CodexNguyenHueFurnitureRestoreRunner()
+    {
+        UnityEditor.EditorApplication.delayCall += RunIfRequested;
+    }
+
+    private static void RunIfRequested()
+    {
+        const string flagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurnitureRestoreFromRecovery.flag";
+        const string originalGlbFlagPath = "Assets/EditorBuildFlags/RunNguyenHueStreetFurnitureInstaller.flag";
+        if (!System.IO.File.Exists(flagPath))
+        {
+            return;
+        }
+
+        NguyenHueStreetFurnitureInstaller.RestoreOriginalGlbStreetFurniture();
+        UnityEditor.AssetDatabase.DeleteAsset(flagPath);
+        if (System.IO.File.Exists(originalGlbFlagPath))
+        {
+            UnityEditor.AssetDatabase.DeleteAsset(originalGlbFlagPath);
+        }
+
+        UnityEditor.AssetDatabase.SaveAssets();
+        UnityEditor.AssetDatabase.Refresh();
+        UnityEngine.Debug.Log("[KyUcSaiGon] Nguyen Hue street furniture restored from original GLB by Codex runner.");
+    }
+}
+#endif

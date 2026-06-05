@@ -1,0 +1,166 @@
+using System.IO;
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+public static class CodexRestoreNguyenHueGltfStreetFurniture
+{
+    private const string ScenePath = "Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity";
+    private const string ModelFolder = "Assets/Art/Models/NguyenHue/StreetFurniture";
+    private const string PrefabFolder = "Assets/Art/Prefabs/NguyenHue/StreetFurniture";
+
+    private static readonly string BenchGlb = $"{ModelFolder}/nguyen_hue_street_bench.glb";
+    private static readonly string LampGlb = $"{ModelFolder}/nguyen_hue_street_lamp.glb";
+    private static readonly string TreeGlb = $"{ModelFolder}/nguyen_hue_street_tree.glb";
+
+    private static readonly string BenchPrefab = $"{PrefabFolder}/PF_NguyenHue_StreetBench.prefab";
+    private static readonly string LampPrefab = $"{PrefabFolder}/PF_NguyenHue_StreetLamp.prefab";
+    private static readonly string TreePrefab = $"{PrefabFolder}/PF_NguyenHue_StreetTree.prefab";
+
+    public static void Run()
+    {
+        Directory.CreateDirectory(PrefabFolder);
+
+        ImportGlb(BenchGlb);
+        ImportGlb(LampGlb);
+        ImportGlb(TreeGlb);
+
+        RebuildPrefab("PF_NguyenHue_StreetBench", "Visual_GLB_NguyenHue_StreetBench", BenchGlb, BenchPrefab);
+        RebuildPrefab("PF_NguyenHue_StreetLamp", "Visual_GLB_NguyenHue_StreetLamp", LampGlb, LampPrefab);
+        RebuildPrefab("PF_NguyenHue_StreetTree", "Visual_GLB_NguyenHue_StreetTree", TreeGlb, TreePrefab);
+
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        ApplySceneTransforms();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[KyUcSaiGon] Restored Nguyen Hue GLB street furniture prefabs and transforms.");
+    }
+
+    private static void ImportGlb(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Missing original GLB asset: {path}");
+        }
+
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (model == null)
+        {
+            throw new MissingReferenceException($"glTFast did not produce a usable model asset for: {path}");
+        }
+    }
+
+    private static void RebuildPrefab(string rootName, string visualName, string glbPath, string prefabPath)
+    {
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
+        if (model == null)
+        {
+            throw new MissingReferenceException($"Cannot build prefab because model is missing: {glbPath}");
+        }
+
+        var root = new GameObject(rootName);
+        var visual = (GameObject)PrefabUtility.InstantiatePrefab(model);
+        visual.name = visualName;
+        visual.transform.SetParent(root.transform, false);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+        visual.transform.localScale = Vector3.one;
+
+        var bounds = CalculateBounds(visual);
+        if (bounds.size.sqrMagnitude > 0.001f)
+        {
+            var collider = root.AddComponent<BoxCollider>();
+            collider.center = bounds.center - root.transform.position;
+            collider.size = bounds.size;
+        }
+
+        PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+        Object.DestroyImmediate(root);
+    }
+
+    private static Bounds CalculateBounds(GameObject obj)
+    {
+        var renderers = obj.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+        {
+            return new Bounds(obj.transform.position, Vector3.zero);
+        }
+
+        var bounds = renderers[0].bounds;
+        for (var i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        return bounds;
+    }
+
+    private static void ApplySceneTransforms()
+    {
+        var streetFurniture = GameObject.Find("StreetFurniture");
+        if (streetFurniture == null)
+        {
+            throw new MissingReferenceException("Cannot find StreetFurniture root in Scene_01_NguyenHue_Tutorial.");
+        }
+
+        var targets = new List<Transform>();
+        foreach (var transform in streetFurniture.GetComponentsInChildren<Transform>(true))
+        {
+            var name = transform.name;
+            if (name.StartsWith("Tree_") || name.StartsWith("Bench_") || name.StartsWith("Lamp_"))
+            {
+                targets.Add(transform);
+            }
+        }
+
+        foreach (var transform in targets)
+        {
+            if (transform == null)
+            {
+                continue;
+            }
+
+            var name = transform.name;
+            if (name.StartsWith("Tree_"))
+            {
+                ApplyTransformAndPrefab(transform, TreePrefab, new Vector3(90f, 0f, 0f), new Vector3(4f, 4f, 4f));
+            }
+            else if (name.StartsWith("Bench_"))
+            {
+                ApplyTransformAndPrefab(transform, BenchPrefab, new Vector3(-90f, 0f, 0f), new Vector3(5f, 5f, 4f));
+            }
+            else if (name.StartsWith("Lamp_"))
+            {
+                ApplyTransformAndPrefab(transform, LampPrefab, new Vector3(-90f, 0f, 100f), new Vector3(5f, 5f, 7f));
+            }
+        }
+    }
+
+    private static void ApplyTransformAndPrefab(Transform target, string prefabPath, Vector3 euler, Vector3 scale)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+        {
+            throw new MissingReferenceException($"Missing prefab: {prefabPath}");
+        }
+
+        var originalName = target.name;
+        var parent = target.parent;
+        var siblingIndex = target.GetSiblingIndex();
+        var position = target.position;
+
+        var replacement = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        replacement.name = originalName;
+        replacement.transform.SetParent(parent, true);
+        replacement.transform.SetSiblingIndex(siblingIndex);
+        replacement.transform.position = position;
+        replacement.transform.localEulerAngles = euler;
+        replacement.transform.localScale = scale;
+
+        Object.DestroyImmediate(target.gameObject);
+    }
+}
