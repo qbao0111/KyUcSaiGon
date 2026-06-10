@@ -2061,7 +2061,6 @@ public static class KyUcSaiGonSceneGenerator
         manager.interactionPromptText = CreateUIText("InteractionPrompt", canvasObject.transform, "Press E to interact", new Vector2(0.5f, 0.2f), new Vector2(420, 40), 20);
         manager.memoryProgressText = CreateUIText("MemoryProgress", canvasObject.transform, "Memory progress: 0/6", new Vector2(0.04f, 0.95f), new Vector2(280, 40), 18);
         manager.objectiveText = CreateUIText("ObjectiveText", canvasObject.transform, objective, new Vector2(0.04f, 0.9f), new Vector2(680, 40), 18);
-        CreateUIText("Crosshair", canvasObject.transform, "+", new Vector2(0.5f, 0.5f), new Vector2(40, 40), 28);
 
         GameObject dialogueBox = CreatePanel("DialogueBox", canvasObject.transform, new Vector2(0.5f, 0.12f), new Vector2(760, 120), new Color(0, 0, 0, 0.75f));
         manager.dialogueBox = dialogueBox;

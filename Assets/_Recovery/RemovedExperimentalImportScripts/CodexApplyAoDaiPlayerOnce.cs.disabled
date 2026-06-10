@@ -1,0 +1,57 @@
+#if UNITY_EDITOR
+using System.IO;
+using UnityEditor;
+
+[InitializeOnLoad]
+public static class CodexApplyAoDaiPlayerOnce
+{
+    private const string SessionKey = "KyUcSaiGon.CodexApplyAoDaiPlayerOnce.Done";
+    private const string SourcePath = "Assets/Scripts/Editor/CodexApplyAoDaiPlayerOnce.cs";
+    private const string RecoveryFolder = "Assets/_Recovery/RemovedExperimentalImportScripts";
+
+    static CodexApplyAoDaiPlayerOnce()
+    {
+        if (SessionState.GetBool(SessionKey, false))
+        {
+            return;
+        }
+
+        EditorApplication.delayCall += RunOnce;
+    }
+
+    private static void RunOnce()
+    {
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+        {
+            EditorApplication.delayCall += RunOnce;
+            return;
+        }
+
+        SessionState.SetBool(SessionKey, true);
+        KyUcSaiGonPlayerModelMenu.ApplyAoDaiToAllScenes();
+        MoveRunnerToRecovery();
+    }
+
+    private static void MoveRunnerToRecovery()
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/_Recovery"))
+        {
+            AssetDatabase.CreateFolder("Assets", "_Recovery");
+        }
+
+        if (!AssetDatabase.IsValidFolder(RecoveryFolder))
+        {
+            AssetDatabase.CreateFolder("Assets/_Recovery", "RemovedExperimentalImportScripts");
+        }
+
+        string targetPath = RecoveryFolder + "/CodexApplyAoDaiPlayerOnce.cs.disabled";
+        if (File.Exists(targetPath))
+        {
+            AssetDatabase.DeleteAsset(targetPath);
+        }
+
+        AssetDatabase.MoveAsset(SourcePath, targetPath);
+        AssetDatabase.SaveAssets();
+    }
+}
+#endif

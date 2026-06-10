@@ -5,6 +5,9 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
+    [Header("Legacy HUD")]
+    public bool showCrosshair;
+
     [Header("HUD")]
     public Text interactionPromptText;
     public Text memoryProgressText;
@@ -37,10 +40,12 @@ public class UIManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        SetLegacyCrosshairVisible(showCrosshair);
     }
 
     private void Start()
     {
+        SetLegacyCrosshairVisible(showCrosshair);
         BindPuzzleButtons();
         ShowInteractionPrompt(false, string.Empty);
         HideDialogue();
@@ -454,6 +459,18 @@ public class UIManager : MonoBehaviour
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        }
+    }
+
+    private void SetLegacyCrosshairVisible(bool visible)
+    {
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in children)
+        {
+            if (child != null && child.name == "Crosshair")
+            {
+                child.gameObject.SetActive(visible);
+            }
         }
     }
 }

@@ -20,7 +20,12 @@ public class PlayerMovementAnimator : MonoBehaviour
 
         if (visualRoot == null)
         {
-            Transform found = transform.Find("Visual_REPLACE_Player_P09_Humandroid");
+            Transform found = transform.Find("Visual_Player_AoDai");
+            if (found == null)
+            {
+                found = transform.Find("Visual_REPLACE_Player_P09_Humandroid");
+            }
+
             visualRoot = found != null ? found : transform;
         }
 

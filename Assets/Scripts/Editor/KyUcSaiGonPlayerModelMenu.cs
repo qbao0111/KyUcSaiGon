@@ -12,6 +12,11 @@ public static class KyUcSaiGonPlayerModelMenu
     private const string IdleClipPath = "Assets/P09_Modular_Humanoid/Scenes/DemoScene_Data/Animation/Demo_Pose/P09_Male_idle.anim";
     private const string RunClipPath = "Assets/P09_Modular_Humanoid/Scenes/DemoScene_Data/Animation/Other/Run_A_v01.anim";
     private const string P09MaterialSearchRoot = "Assets/P09_Modular_Humanoid/Model_DATA/Materials";
+    private const string AoDaiModelPath = "Assets/Art/Models/Common/Characters/AoDai/AoDai.fbx";
+    private const string AoDaiIdlePath = "Assets/Art/Animations/Characters/AoDai/AoDai_Idle.fbx";
+    private const string AoDaiWalkPath = "Assets/Art/Animations/Characters/AoDai/AoDai_Walk.fbx";
+    private const string AoDaiJogPath = "Assets/Art/Animations/Characters/AoDai/AoDai_Jog.fbx";
+    private const string AoDaiControllerPath = "Assets/Art/Animations/Characters/AoDai/AC_Player_AoDai.controller";
 
     [MenuItem("Ky Uc Sai Gon/Apply P09 Player To Open Scene")]
     public static void ApplyToOpenScene()
@@ -47,6 +52,42 @@ public static class KyUcSaiGonPlayerModelMenu
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[KyUcSaiGon] P09 player applied to all gameplay scenes.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Apply AoDai Player To Open Scene")]
+    public static void ApplyAoDaiToOpenScene()
+    {
+        ConfigureAoDaiImports();
+        AnimatorController controller = CreateOrLoadAoDaiController();
+        ApplyAoDaiToScene(SceneManager.GetActiveScene().path, controller);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[KyUcSaiGon] AoDai player applied to open scene.");
+    }
+
+    [MenuItem("Ky Uc Sai Gon/Apply AoDai Player To All Scenes")]
+    public static void ApplyAoDaiToAllScenes()
+    {
+        ConfigureAoDaiImports();
+        AnimatorController controller = CreateOrLoadAoDaiController();
+        string[] scenePaths =
+        {
+            "Assets/Scenes/Scene_00_BusHub.unity",
+            "Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity",
+            "Assets/Scenes/Scene_02_BenThanh.unity",
+            "Assets/Scenes/Scene_03_DinhDocLap.unity",
+            "Assets/Scenes/Scene_04_NhaThoDucBa.unity",
+            "Assets/Scenes/Scene_05_Bitexco.unity",
+            "Assets/Scenes/Scene_06_BachDang.unity",
+            "Assets/Scenes/Scene_07_Ending.unity"
+        };
+
+        foreach (string scenePath in scenePaths)
+        {
+            ApplyAoDaiToScene(scenePath, controller);
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[KyUcSaiGon] AoDai player applied to all gameplay scenes.");
     }
 
     [MenuItem("Ky Uc Sai Gon/Reset P09 Original Materials")]
@@ -202,6 +243,70 @@ public static class KyUcSaiGonPlayerModelMenu
         EditorSceneManager.SaveScene(scene);
     }
 
+    private static void ApplyAoDaiToScene(string scenePath, RuntimeAnimatorController controller)
+    {
+        if (string.IsNullOrWhiteSpace(scenePath))
+        {
+            return;
+        }
+
+        GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AoDaiModelPath);
+        if (modelPrefab == null)
+        {
+            Debug.LogError("[KyUcSaiGon] Missing AoDai model: " + AoDaiModelPath);
+            return;
+        }
+
+        Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        GameObject player = GameObject.Find("REPLACE_Player_Character");
+        if (player == null)
+        {
+            Debug.LogWarning("[KyUcSaiGon] Player not found in " + scenePath);
+            return;
+        }
+
+        RemoveRootPlaceholderMesh(player);
+        ConfigurePlayerCollider(player);
+        Transform oldVisual = player.transform.Find("Visual_REPLACE_Player_P09_Humandroid");
+        Vector3 localPosition = oldVisual != null ? oldVisual.localPosition : Vector3.zero;
+        Quaternion localRotation = oldVisual != null ? oldVisual.localRotation : Quaternion.identity;
+        Vector3 localScale = oldVisual != null ? oldVisual.localScale : Vector3.one;
+
+        BackupP09Visual(player.transform, oldVisual);
+        RemoveExistingAoDaiVisual(player.transform);
+
+        GameObject visual = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+        visual.name = "Visual_Player_AoDai";
+        visual.transform.SetParent(player.transform, false);
+        visual.transform.localPosition = localPosition;
+        visual.transform.localRotation = localRotation;
+        visual.transform.localScale = localScale;
+        RemoveChildColliders(visual);
+
+        Animator animator = visual.GetComponent<Animator>();
+        if (animator == null)
+        {
+            animator = visual.AddComponent<Animator>();
+        }
+
+        animator.runtimeAnimatorController = controller;
+        animator.avatar = LoadAoDaiAvatar();
+        animator.applyRootMotion = false;
+
+        PlayerMovementAnimator movementAnimator = player.GetComponent<PlayerMovementAnimator>();
+        if (movementAnimator == null)
+        {
+            movementAnimator = player.AddComponent<PlayerMovementAnimator>();
+        }
+
+        movementAnimator.visualRoot = visual.transform;
+        movementAnimator.animator = animator;
+        movementAnimator.targetVisualScale = Mathf.Max(localScale.x, 1.45f);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+    }
+
     private static void RemoveRootPlaceholderMesh(GameObject player)
     {
         MeshRenderer renderer = player.GetComponent<MeshRenderer>();
@@ -271,6 +376,42 @@ public static class KyUcSaiGonPlayerModelMenu
         }
     }
 
+    private static void BackupP09Visual(Transform playerRoot, Transform oldVisual)
+    {
+        Transform backup = playerRoot.Find("OldVisual_Backup_Disabled");
+        if (backup == null)
+        {
+            GameObject backupObject = new GameObject("OldVisual_Backup_Disabled");
+            backupObject.transform.SetParent(playerRoot, false);
+            backup = backupObject.transform;
+        }
+
+        if (oldVisual != null && oldVisual.parent != backup)
+        {
+            oldVisual.SetParent(backup, true);
+        }
+
+        backup.gameObject.SetActive(false);
+    }
+
+    private static void RemoveExistingAoDaiVisual(Transform playerRoot)
+    {
+        Transform existing = playerRoot.Find("Visual_Player_AoDai");
+        if (existing != null)
+        {
+            Object.DestroyImmediate(existing.gameObject);
+        }
+    }
+
+    private static void RemoveChildColliders(GameObject visual)
+    {
+        Collider[] colliders = visual.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+        {
+            Object.DestroyImmediate(collider);
+        }
+    }
+
     private static void ConfigureVisual(GameObject visual)
     {
         Collider[] colliders = visual.GetComponentsInChildren<Collider>(true);
@@ -330,6 +471,172 @@ public static class KyUcSaiGonPlayerModelMenu
         toIdle.AddCondition(AnimatorConditionMode.Less, 0.08f, "Speed");
 
         return controller;
+    }
+
+    private static void ConfigureAoDaiImports()
+    {
+        ConfigureAoDaiModelImport();
+        Avatar avatar = LoadAoDaiAvatar();
+        ConfigureAoDaiAnimationImport(AoDaiIdlePath, "ANIM_AoDai_Idle", avatar);
+        ConfigureAoDaiAnimationImport(AoDaiWalkPath, "ANIM_AoDai_Walk", avatar);
+        ConfigureAoDaiAnimationImport(AoDaiJogPath, "ANIM_AoDai_Jog", avatar);
+    }
+
+    private static void ConfigureAoDaiModelImport()
+    {
+        ModelImporter importer = AssetImporter.GetAtPath(AoDaiModelPath) as ModelImporter;
+        if (importer == null)
+        {
+            Debug.LogError("[KyUcSaiGon] AoDai model importer not found: " + AoDaiModelPath);
+            return;
+        }
+
+        importer.animationType = ModelImporterAnimationType.Human;
+        importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+        importer.importAnimation = true;
+        importer.SaveAndReimport();
+    }
+
+    private static void ConfigureAoDaiAnimationImport(string path, string clipName, Avatar sourceAvatar)
+    {
+        ModelImporter importer = AssetImporter.GetAtPath(path) as ModelImporter;
+        if (importer == null)
+        {
+            Debug.LogError("[KyUcSaiGon] AoDai animation importer not found: " + path);
+            return;
+        }
+
+        importer.animationType = ModelImporterAnimationType.Human;
+        importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+        importer.sourceAvatar = sourceAvatar;
+        importer.importAnimation = true;
+
+        ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
+        if (clips.Length == 0)
+        {
+            clips = importer.clipAnimations;
+        }
+
+        if (clips.Length > 0)
+        {
+            clips[0].name = clipName;
+            clips[0].loopTime = true;
+            clips[0].wrapMode = WrapMode.Loop;
+            importer.clipAnimations = new[] { clips[0] };
+        }
+
+        importer.SaveAndReimport();
+    }
+
+    private static AnimatorController CreateOrLoadAoDaiController()
+    {
+        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AoDaiControllerPath);
+        if (controller == null)
+        {
+            controller = AnimatorController.CreateAnimatorControllerAtPath(AoDaiControllerPath);
+        }
+
+        EnsureAnimatorFloat(controller, "Speed");
+
+        AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+        AnimatorState idle = EnsureState(stateMachine, "Idle", LoadClip(AoDaiIdlePath, "ANIM_AoDai_Idle"));
+        AnimatorState walk = EnsureState(stateMachine, "Walk", LoadClip(AoDaiWalkPath, "ANIM_AoDai_Walk"));
+        AnimatorState jog = EnsureState(stateMachine, "Jog", LoadClip(AoDaiJogPath, "ANIM_AoDai_Jog"));
+        stateMachine.defaultState = idle;
+
+        ClearTransitions(idle);
+        ClearTransitions(walk);
+        ClearTransitions(jog);
+        AddTransition(idle, walk, AnimatorConditionMode.Greater, 0.1f, 0.1f);
+        AddTransition(walk, idle, AnimatorConditionMode.Less, 0.1f, 0.1f);
+        AddTransition(walk, jog, AnimatorConditionMode.Greater, 1.8f, 0.15f);
+        AddTransition(jog, walk, AnimatorConditionMode.Less, 1.8f, 0.15f);
+        AddTransition(jog, idle, AnimatorConditionMode.Less, 0.1f, 0.15f);
+
+        EditorUtility.SetDirty(controller);
+        return controller;
+    }
+
+    private static Avatar LoadAoDaiAvatar()
+    {
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(AoDaiModelPath);
+        foreach (Object asset in assets)
+        {
+            if (asset is Avatar avatar)
+            {
+                return avatar;
+            }
+        }
+
+        return null;
+    }
+
+    private static AnimationClip LoadClip(string path, string preferredName)
+    {
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+        foreach (Object asset in assets)
+        {
+            if (asset is AnimationClip clip && clip.name == preferredName)
+            {
+                return clip;
+            }
+        }
+
+        foreach (Object asset in assets)
+        {
+            if (asset is AnimationClip clip && !clip.name.StartsWith("__preview", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return clip;
+            }
+        }
+
+        Debug.LogWarning("[KyUcSaiGon] Animation clip not found: " + path);
+        return null;
+    }
+
+    private static void EnsureAnimatorFloat(AnimatorController controller, string parameterName)
+    {
+        foreach (AnimatorControllerParameter parameter in controller.parameters)
+        {
+            if (parameter.name == parameterName)
+            {
+                return;
+            }
+        }
+
+        controller.AddParameter(parameterName, AnimatorControllerParameterType.Float);
+    }
+
+    private static AnimatorState EnsureState(AnimatorStateMachine stateMachine, string stateName, Motion motion)
+    {
+        foreach (ChildAnimatorState child in stateMachine.states)
+        {
+            if (child.state.name == stateName)
+            {
+                child.state.motion = motion;
+                return child.state;
+            }
+        }
+
+        AnimatorState state = stateMachine.AddState(stateName);
+        state.motion = motion;
+        return state;
+    }
+
+    private static void ClearTransitions(AnimatorState state)
+    {
+        foreach (AnimatorStateTransition transition in state.transitions)
+        {
+            state.RemoveTransition(transition);
+        }
+    }
+
+    private static void AddTransition(AnimatorState from, AnimatorState to, AnimatorConditionMode mode, float threshold, float duration)
+    {
+        AnimatorStateTransition transition = from.AddTransition(to);
+        transition.hasExitTime = false;
+        transition.duration = duration;
+        transition.AddCondition(mode, threshold, "Speed");
     }
 }
 #endif
