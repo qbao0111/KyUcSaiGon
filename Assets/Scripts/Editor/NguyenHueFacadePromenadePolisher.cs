@@ -39,7 +39,7 @@ public static class NguyenHueFacadePromenadePolisher
         };
     }
 
-    [MenuItem("Ky Uc Sai Gon/Polish Nguyen Hue Facades And Promenade")]
+    // Legacy one-off tool hidden from the main menu.
     public static void PolishNguyenHueFacadesAndPromenade()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

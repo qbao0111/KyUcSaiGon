@@ -30,7 +30,7 @@ public static class KyUcSaiGonSceneGenerator
     private static readonly Color BusWindowBlue = new Color(0.2f, 0.55f, 0.75f, 0.42f);
     private static readonly Color BusWarmLight = new Color(1f, 0.62f, 0.2f);
 
-    [MenuItem("Ky Uc Sai Gon/Generate Complete Blockout Prototype")]
+    // Legacy generators are hidden from the menu now that scenes are source-controlled.
     public static void GenerateCompletePrototype()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -53,7 +53,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Large third-person blockout prototype generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Bus Hub Only %#h")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateBusHubOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -63,7 +63,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Vintage Bus Hub blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Nguyen Hue Tutorial Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateNguyenHueOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -73,7 +73,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Nguyen Hue tutorial blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Ben Thanh Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateBenThanhOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -83,7 +83,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Ben Thanh blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Dinh Doc Lap Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateDinhDocLapOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -93,7 +93,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Dinh Doc Lap blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Nha Tho Duc Ba Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateNhaThoDucBaOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -103,7 +103,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Nha Tho Duc Ba blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Bitexco Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateBitexcoOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -113,7 +113,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Bitexco blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Bach Dang Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateBachDangOnly()
     {
         Directory.CreateDirectory(SceneFolder);
@@ -123,7 +123,7 @@ public static class KyUcSaiGonSceneGenerator
         Debug.Log("[KyUcSaiGon] Bach Dang blockout generated.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Generate Ending Only")]
+    // Legacy generator hidden from the main menu.
     public static void GenerateEndingOnly()
     {
         Directory.CreateDirectory(SceneFolder);

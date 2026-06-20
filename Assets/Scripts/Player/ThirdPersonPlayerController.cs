@@ -27,8 +27,7 @@ public class ThirdPersonPlayerController : MonoBehaviour
 
     private void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        CursorLockManager.LockForGameplay();
         PrototypeLogger.Info("Third-person controller ready. WASD move, mouse orbit, E interact.");
     }
 
@@ -39,6 +38,7 @@ public class ThirdPersonPlayerController : MonoBehaviour
             return;
         }
 
+        CursorLockManager.EnsureGameplayLock(false);
         MoveRelativeToCamera();
     }
 

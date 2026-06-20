@@ -58,7 +58,7 @@ public static class NguyenHueCityHallBackdropInstaller
         };
     }
 
-    [MenuItem("Ky Uc Sai Gon/Apply Nguyen Hue City Hall Backdrop Model")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyCityHallBackdrop()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

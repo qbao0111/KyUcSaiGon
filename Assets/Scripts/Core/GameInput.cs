@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -145,5 +146,80 @@ public static class GameInput
         }
 #endif
         return string.Empty;
+    }
+}
+
+public static class CursorLockManager
+{
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Initialize()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        EnsureRuntimeEnforcer();
+        LockForGameplay();
+    }
+
+    public static void LockForGameplay()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    public static void UnlockForUI()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    public static void EnsureGameplayLock(bool inputBlocked)
+    {
+        if (inputBlocked)
+        {
+            return;
+        }
+
+        if (Cursor.lockState != CursorLockMode.Locked || Cursor.visible)
+        {
+            LockForGameplay();
+        }
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        EnsureRuntimeEnforcer();
+        LockForGameplay();
+    }
+
+    private static void EnsureRuntimeEnforcer()
+    {
+        if (Object.FindFirstObjectByType<CursorLockRuntimeEnforcer>() != null)
+        {
+            return;
+        }
+
+        GameObject enforcer = new GameObject("CursorLockRuntimeEnforcer");
+        Object.DontDestroyOnLoad(enforcer);
+        enforcer.AddComponent<CursorLockRuntimeEnforcer>();
+    }
+}
+
+public class CursorLockRuntimeEnforcer : MonoBehaviour
+{
+    private void Update()
+    {
+        bool inputBlocked = UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput;
+        CursorLockManager.EnsureGameplayLock(inputBlocked);
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            return;
+        }
+
+        bool inputBlocked = UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput;
+        CursorLockManager.EnsureGameplayLock(inputBlocked);
     }
 }

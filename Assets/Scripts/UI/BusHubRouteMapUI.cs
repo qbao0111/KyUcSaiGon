@@ -51,6 +51,7 @@ public class BusHubRouteMapUI : MonoBehaviour
         selectedIndex = Mathf.Clamp(selectedIndex, 0, buttons.Count - 1);
         UIManager.Instance?.SetExternalInputBlocked(true);
         UIManager.Instance?.ShowInteractionPrompt(false, string.Empty);
+        CursorLockManager.UnlockForUI();
         RefreshSelection();
         PrototypeLogger.Info("Opened BusHub route map UI.");
     }
@@ -63,6 +64,7 @@ public class BusHubRouteMapUI : MonoBehaviour
         }
 
         UIManager.Instance?.SetExternalInputBlocked(false);
+        CursorLockManager.LockForGameplay();
     }
 
     private void Update()
@@ -113,7 +115,7 @@ public class BusHubRouteMapUI : MonoBehaviour
             return;
         }
 
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             GameObject canvasObject = new GameObject("UI_Canvas");

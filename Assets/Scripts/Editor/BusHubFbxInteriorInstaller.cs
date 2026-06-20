@@ -58,7 +58,7 @@ public static class BusHubFbxInteriorInstaller
         };
     }
 
-    [MenuItem("Ky Uc Sai Gon/BusHub/Apply FBX Interior Props")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyFbxInteriorProps()
     {
         EnsureFolders();

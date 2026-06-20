@@ -18,7 +18,7 @@ public static class KyUcSaiGonPlayerModelMenu
     private const string AoDaiJogPath = "Assets/Art/Animations/Characters/AoDai/AoDai_Jog.fbx";
     private const string AoDaiControllerPath = "Assets/Art/Animations/Characters/AoDai/AC_Player_AoDai.controller";
 
-    [MenuItem("Ky Uc Sai Gon/Apply P09 Player To Open Scene")]
+    // Legacy one-off tool hidden from the main menu.
     public static void ApplyToOpenScene()
     {
         ResetP09MaterialTints();
@@ -28,7 +28,7 @@ public static class KyUcSaiGonPlayerModelMenu
         Debug.Log("[KyUcSaiGon] P09 player applied to open scene.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Apply P09 Player To All Scenes")]
+    // Legacy one-off tool hidden from the main menu.
     public static void ApplyToAllScenes()
     {
         ResetP09MaterialTints();
@@ -54,7 +54,7 @@ public static class KyUcSaiGonPlayerModelMenu
         Debug.Log("[KyUcSaiGon] P09 player applied to all gameplay scenes.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Apply AoDai Player To Open Scene")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyAoDaiToOpenScene()
     {
         ConfigureAoDaiImports();
@@ -64,7 +64,7 @@ public static class KyUcSaiGonPlayerModelMenu
         Debug.Log("[KyUcSaiGon] AoDai player applied to open scene.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Apply AoDai Player To All Scenes")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyAoDaiToAllScenes()
     {
         ConfigureAoDaiImports();
@@ -90,7 +90,7 @@ public static class KyUcSaiGonPlayerModelMenu
         Debug.Log("[KyUcSaiGon] AoDai player applied to all gameplay scenes.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Reset P09 Original Materials")]
+    // Legacy one-off tool hidden from the main menu.
     public static void ResetP09MaterialsOnly()
     {
         ResetP09MaterialTints();

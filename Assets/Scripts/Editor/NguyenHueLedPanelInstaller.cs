@@ -21,7 +21,7 @@ public static class NguyenHueLedPanelInstaller
     private const string ScreenColorPatchName = "ScreenColorPatch";
     private const float ModelCompensationScale = 300f;
 
-    [MenuItem("Ky Uc Sai Gon/Apply Nguyen Hue LED Hint Panel Model")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyNguyenHueLedPanels()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -53,7 +53,7 @@ public static class NguyenHueLedPanelInstaller
         Debug.Log("[KyUcSaiGon] Nguyen Hue LED hint panels installed.");
     }
 
-    [MenuItem("Ky Uc Sai Gon/Create Nguyen Hue LED Hint Panel Prefab Only")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void CreatePrefabOnly()
     {
         EnsureMaterials();

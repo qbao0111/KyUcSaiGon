@@ -163,8 +163,7 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        CursorLockManager.UnlockForUI();
         if (puzzleInput.interactable)
         {
             puzzleInput.Select();
@@ -210,8 +209,7 @@ public class UIManager : MonoBehaviour
         externalInputBlocked = blocked;
         if (blocked)
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            CursorLockManager.UnlockForUI();
         }
         else
         {
@@ -457,8 +455,7 @@ public class UIManager : MonoBehaviour
     {
         if (!IsBlockingPlayerInput)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            CursorLockManager.LockForGameplay();
         }
     }
 

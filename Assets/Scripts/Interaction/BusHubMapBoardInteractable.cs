@@ -10,7 +10,7 @@ public class BusHubMapBoardInteractable : MonoBehaviour, IInteractable
     {
         if (routeMapUI == null)
         {
-            routeMapUI = FindObjectOfType<BusHubMapUIController>();
+            routeMapUI = FindFirstObjectByType<BusHubMapUIController>();
         }
 
         if (routeMapUI != null)

@@ -41,7 +41,7 @@ public static class NguyenHuePromenadeFloorBuilder
         };
     }
 
-    [MenuItem("Ky Uc Sai Gon/Build Nguyen Hue Promenade Floor")]
+    // Legacy one-off tool hidden from the main menu.
     public static void BuildNguyenHuePromenadeFloor()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

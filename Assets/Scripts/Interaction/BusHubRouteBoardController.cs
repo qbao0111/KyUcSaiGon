@@ -57,7 +57,7 @@ public class BusHubRouteBoardController : MonoBehaviour
         boardCollider.center = transform.InverseTransformPoint(new Vector3(0.5f, 2.9f, 14.25f));
         boardCollider.size = new Vector3(8.4f, 4.7f, 1.1f);
 
-        BusHubMapUIController routeMapUI = FindObjectOfType<BusHubMapUIController>();
+        BusHubMapUIController routeMapUI = FindFirstObjectByType<BusHubMapUIController>();
         if (routeMapUI == null)
         {
             routeMapUI = gameObject.AddComponent<BusHubMapUIController>();

@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 public static class KyUcSaiGonTeamSetupMenu
 {
-    private const string MenuRoot = "Ky Uc Sai Gon/Team Setup/";
+    private const string MenuRoot = "Ky Uc Sai Gon/Setup/";
 
     private static readonly string[] GameplayScenes =
     {
@@ -108,6 +108,12 @@ public static class KyUcSaiGonTeamSetupMenu
 
             ApplyNguyenHueArtSetup();
             report.Add("Nguyen Hue art references applied.");
+
+            InvokeOptionalPublicStatic("DinhDocLapLayoutPolisher", "ApplyNoPrompt");
+            report.Add("Dinh Doc Lap recognizable layout applied.");
+
+            BenThanhMarketAssetInstaller.ApplyMarketAssetsNoPrompt();
+            report.Add("Ben Thanh market assets and promenade applied.");
 
             KyUcSaiGonPlayerModelMenu.ApplyAoDaiToAllScenes();
             report.Add("AoDai player visual applied to all gameplay scenes.");
@@ -255,6 +261,24 @@ public static class KyUcSaiGonTeamSetupMenu
         return File.ReadAllText(manifestPath).Contains("\"" + packageName + "\"");
     }
 
+    private static void InvokeOptionalPublicStatic(string typeName, string methodName)
+    {
+        Type type = Type.GetType(typeName + ", Assembly-CSharp-Editor");
+        if (type == null)
+        {
+            Debug.LogWarning("[KyUcSaiGon] Optional setup tool not found: " + typeName);
+            return;
+        }
+
+        MethodInfo method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
+        if (method == null)
+        {
+            Debug.LogWarning("[KyUcSaiGon] Optional setup method not found: " + typeName + "." + methodName);
+            return;
+        }
+
+        method.Invoke(null, null);
+    }
     private static void InvokePrivateStatic(Type type, string methodName)
     {
         MethodInfo method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static);

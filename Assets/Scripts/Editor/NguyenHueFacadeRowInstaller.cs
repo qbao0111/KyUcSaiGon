@@ -48,7 +48,7 @@ public static class NguyenHueFacadeRowInstaller
         };
     }
 
-    [MenuItem("Ky Uc Sai Gon/Install Nguyen Hue Facade Row Models")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void InstallNguyenHueFacadeRows()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

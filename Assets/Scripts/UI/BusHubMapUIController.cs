@@ -54,8 +54,6 @@ public class BusHubMapUIController : MonoBehaviour
     private int selectedIndex;
     private int openedFrame = -1;
     private bool confirmingRoute;
-    private CursorLockMode previousCursorLockMode;
-    private bool previousCursorVisible;
 
     public bool IsOpen => overlayRoot != null && overlayRoot.activeSelf;
 
@@ -71,10 +69,7 @@ public class BusHubMapUIController : MonoBehaviour
         SelectNode(selectedIndex);
         UIManager.Instance?.SetExternalInputBlocked(true);
         UIManager.Instance?.ShowInteractionPrompt(false, string.Empty);
-        previousCursorLockMode = Cursor.lockState;
-        previousCursorVisible = Cursor.visible;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        CursorLockManager.UnlockForUI();
         PrototypeLogger.Info("Opened BusHub route board UI.");
     }
 
@@ -91,8 +86,7 @@ public class BusHubMapUIController : MonoBehaviour
         }
 
         UIManager.Instance?.SetExternalInputBlocked(false);
-        Cursor.lockState = previousCursorLockMode;
-        Cursor.visible = previousCursorVisible;
+        CursorLockManager.LockForGameplay();
     }
 
     public void ToggleMap()
@@ -176,8 +170,7 @@ public class BusHubMapUIController : MonoBehaviour
 
         overlayRoot.SetActive(false);
         UIManager.Instance?.SetExternalInputBlocked(false);
-        Cursor.lockState = previousCursorLockMode;
-        Cursor.visible = previousCursorVisible;
+        CursorLockManager.LockForGameplay();
         SceneLoader.Load(routeButton.sceneName);
     }
 
@@ -431,8 +424,7 @@ public class BusHubMapUIController : MonoBehaviour
             confirmingRoute = true;
             overlayRoot.SetActive(false);
             UIManager.Instance?.SetExternalInputBlocked(false);
-            Cursor.lockState = previousCursorLockMode;
-            Cursor.visible = previousCursorVisible;
+            CursorLockManager.LockForGameplay();
             SceneLoader.Load(SceneLoader.Ending);
         });
     }

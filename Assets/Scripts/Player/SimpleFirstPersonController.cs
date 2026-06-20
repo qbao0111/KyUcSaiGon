@@ -35,8 +35,7 @@ public class SimpleFirstPersonController : MonoBehaviour
 
     private void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        CursorLockManager.LockForGameplay();
         cameraYaw = transform.eulerAngles.y;
         cameraPitch = 0f;
         PrototypeLogger.Info("Third-person player ready. WASD move, mouse orbit, E interact.");
@@ -49,6 +48,7 @@ public class SimpleFirstPersonController : MonoBehaviour
             return;
         }
 
+        CursorLockManager.EnsureGameplayLock(false);
         Look();
         Move();
     }

@@ -16,7 +16,7 @@ public static class NguyenHueFountainModelInstaller
     private const string FountainVisualRootName = "Visual_REPLACE_NguyenHue_Fountain";
     private const string InstalledModelName = "Visual_REPLACE_NguyenHue_Fountain_FBX";
 
-    [MenuItem("Ky Uc Sai Gon/Apply Nguyen Hue Fountain Model")]
+    // Hidden from the main menu. Run through Ky Uc Sai Gon/Setup/Apply After Pull.
     public static void ApplyToNguyenHueScene()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -91,7 +91,7 @@ public static class NguyenHueFountainModelInstaller
         EditorUtility.SetDirty(fountainRoot);
     }
 
-    [MenuItem("Ky Uc Sai Gon/Extract Nguyen Hue Fountain Textures")]
+    // Legacy one-off texture helper hidden from the main menu.
     public static void PrepareFountainMaterialsMenu()
     {
         PrepareFountainMaterials();
