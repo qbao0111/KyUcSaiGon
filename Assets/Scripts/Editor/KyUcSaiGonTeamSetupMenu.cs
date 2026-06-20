@@ -110,7 +110,8 @@ public static class KyUcSaiGonTeamSetupMenu
             report.Add("Nguyen Hue art references applied.");
 
             InvokeOptionalPublicStatic("DinhDocLapLayoutPolisher", "ApplyNoPrompt");
-            report.Add("Dinh Doc Lap recognizable layout applied.");
+            InvokeOptionalPublicStatic("DinhDocLapImportedLandmarkInstaller", "ApplyNoPrompt");
+            report.Add("Dinh Doc Lap imported landmark models applied.");
 
             BenThanhMarketAssetInstaller.ApplyMarketAssetsNoPrompt();
             report.Add("Ben Thanh market assets and promenade applied.");
