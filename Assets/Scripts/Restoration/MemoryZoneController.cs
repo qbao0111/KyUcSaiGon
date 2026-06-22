@@ -35,8 +35,8 @@ public class MemoryZoneController : MonoBehaviour
         IsRestored = true;
         GameProgressManager.Instance?.MarkLocationRestored(locationId, memoryFragmentName);
         ApplyRestoredState(true, false);
-        UIManager.Instance?.ShowDialogue("Da nhan manh ky uc: " + memoryFragmentName);
-        UIManager.Instance?.SetObjective("Tro ve tram xe buyt co.");
+        UIManager.Instance?.ShowDialogue("Đã nhận mảnh ký ức: " + memoryFragmentName);
+        UIManager.Instance?.SetObjective("Đi đến trạm xe buýt ký ức để quay lại Hub.");
         Restored?.Invoke();
     }
 

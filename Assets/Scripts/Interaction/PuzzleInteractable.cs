@@ -13,14 +13,14 @@ public class PuzzleInteractable : MonoBehaviour, IInteractable
     public string[] stepperLabels = { "Bass", "Mid", "Treble" };
     public MemoryZoneController memoryZone;
 
-    public string InteractionPrompt => memoryZone != null && memoryZone.IsRestored ? "Already restored" : "Press E to solve puzzle";
+    public string InteractionPrompt => memoryZone != null && memoryZone.IsRestored ? "Khu vực đã được khôi phục" : "Nhấn E để giải câu đố";
 
     public void Interact(Interactor interactor)
     {
         PrototypeLogger.Info("Puzzle interact: " + puzzleTitle);
         if (memoryZone != null && memoryZone.IsRestored)
         {
-            UIManager.Instance?.ShowDialogue("Noi nay da co mau sac tro lai roi.");
+            UIManager.Instance?.ShowDialogue("Nơi này đã có màu sắc trở lại rồi.");
             return;
         }
 
