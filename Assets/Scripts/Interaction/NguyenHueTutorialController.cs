@@ -8,6 +8,7 @@ public class NguyenHueTutorialController : MonoBehaviour
     public PuzzleInteractable speakerPuzzle;
     public BusStopInteractable returnBusStop;
     public LEDHintInteractable[] ledHints;
+    public NguyenHueRestorationController restorationController;
 
     [TextArea] public string initialObjective = "Đi dọc phố đi bộ và nói chuyện với nhạc công.";
     [TextArea] public string itemObjective = "Tìm vật gợi nhớ quanh khu vực biểu diễn.";
@@ -131,6 +132,13 @@ public class NguyenHueTutorialController : MonoBehaviour
 
     private void HandleRestored()
     {
+        if (restorationController != null && restorationController.State != NguyenHueRestorationController.RestorationState.Restored)
+        {
+            SetBusStopVisible(false);
+            UIManager.Instance?.SetObjective("Ký ức đang trở lại với phố đi bộ...");
+            return;
+        }
+
         SetBusStopVisible(true);
         UIManager.Instance?.ShowDialogue(restoredDialogue);
         UIManager.Instance?.SetObjective(busStopObjective);
@@ -172,6 +180,11 @@ public class NguyenHueTutorialController : MonoBehaviour
         if (returnBusStop == null)
         {
             returnBusStop = FindInScene<BusStopInteractable>("REPLACE_BusStop_ReturnHub");
+        }
+
+        if (restorationController == null)
+        {
+            restorationController = FindInScene<NguyenHueRestorationController>("NguyenHueRestorationController");
         }
 
         if (ledHints == null || ledHints.Length == 0)

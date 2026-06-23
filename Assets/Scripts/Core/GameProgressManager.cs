@@ -5,6 +5,7 @@ using UnityEngine;
 public class GameProgressManager : MonoBehaviour
 {
     public static GameProgressManager Instance { get; private set; }
+    public const int RequiredMemoryFragments = 2;
 
     [Serializable]
     public class LocationProgress
@@ -44,6 +45,7 @@ public class GameProgressManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         developerMode = DeveloperMode.IsEnabled;
+        busHubUnlocked = true;
         RecalculateProgress();
     }
 
@@ -70,23 +72,7 @@ public class GameProgressManager : MonoBehaviour
             return true;
         }
 
-        switch (locationId)
-        {
-            case LocationId.NguyenHue:
-                return true;
-            case LocationId.BenThanh:
-                return IsRestored(LocationId.NguyenHue);
-            case LocationId.DinhDocLap:
-                return IsRestored(LocationId.BenThanh);
-            case LocationId.NhaThoDucBa:
-                return IsRestored(LocationId.DinhDocLap);
-            case LocationId.Bitexco:
-                return IsRestored(LocationId.NhaThoDucBa);
-            case LocationId.BachDang:
-                return IsRestored(LocationId.Bitexco);
-            default:
-                return false;
-        }
+        return IsRequiredMemoryLocation(locationId);
     }
 
     public void MarkLocationRestored(LocationId locationId, string fragmentName)
@@ -105,10 +91,7 @@ public class GameProgressManager : MonoBehaviour
             collectedFragments.Add(fragmentName);
         }
 
-        if (locationId == LocationId.NguyenHue)
-        {
-            busHubUnlocked = true;
-        }
+        busHubUnlocked = true;
 
         RecalculateProgress();
         UIManager.Instance?.RefreshProgressText();
@@ -128,7 +111,7 @@ public class GameProgressManager : MonoBehaviour
 
         collectedFragments.Clear();
         memoryFragmentsCollected = 0;
-        busHubUnlocked = false;
+        busHubUnlocked = true;
         endingUnlocked = false;
         UIManager.Instance?.RefreshProgressText();
     }
@@ -136,11 +119,7 @@ public class GameProgressManager : MonoBehaviour
     public bool AreAllMemoriesRestored()
     {
         return IsRestored(LocationId.NguyenHue)
-            && IsRestored(LocationId.BenThanh)
-            && IsRestored(LocationId.DinhDocLap)
-            && IsRestored(LocationId.NhaThoDucBa)
-            && IsRestored(LocationId.Bitexco)
-            && IsRestored(LocationId.BachDang);
+            && IsRestored(LocationId.NhaThoDucBa);
     }
 
     public void RefreshDeveloperMode()
@@ -161,6 +140,12 @@ public class GameProgressManager : MonoBehaviour
         return null;
     }
 
+    public bool IsRequiredMemoryLocation(LocationId locationId)
+    {
+        return locationId == LocationId.NguyenHue
+            || locationId == LocationId.NhaThoDucBa;
+    }
+
     private void RecalculateProgress()
     {
         memoryFragmentsCollected = 0;
@@ -168,7 +153,7 @@ public class GameProgressManager : MonoBehaviour
 
         foreach (LocationProgress progress in locationStates)
         {
-            if (progress.restored)
+            if (progress.restored && IsRequiredMemoryLocation(progress.locationId))
             {
                 memoryFragmentsCollected++;
                 if (!string.IsNullOrWhiteSpace(progress.memoryFragmentName))
@@ -178,6 +163,7 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
+        busHubUnlocked = true;
         endingUnlocked = AreAllMemoriesRestored();
     }
 }

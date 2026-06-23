@@ -140,7 +140,7 @@ public class UIManager : MonoBehaviour
         }
 
         int count = GameProgressManager.Instance != null ? GameProgressManager.Instance.memoryFragmentsCollected : 0;
-        memoryProgressText.text = "Ký ức: " + count + "/6";
+        memoryProgressText.text = "Ký ức: " + count + "/" + GameProgressManager.RequiredMemoryFragments;
     }
 
     public void ShowPuzzle(PuzzleInteractable puzzle)

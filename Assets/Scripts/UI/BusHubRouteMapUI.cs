@@ -26,11 +26,7 @@ public class BusHubRouteMapUI : MonoBehaviour
     private static readonly RouteOption[] AllRoutes =
     {
         new RouteOption("Nguyễn Huệ", SceneLoader.NguyenHue, LocationId.NguyenHue, false),
-        new RouteOption("Chợ Bến Thành", SceneLoader.BenThanh, LocationId.BenThanh, false),
-        new RouteOption("Dinh Độc Lập", SceneLoader.DinhDocLap, LocationId.DinhDocLap, false),
         new RouteOption("Nhà thờ Đức Bà", SceneLoader.NhaThoDucBa, LocationId.NhaThoDucBa, false),
-        new RouteOption("Bitexco", SceneLoader.Bitexco, LocationId.Bitexco, false),
-        new RouteOption("Bến Bạch Đằng", SceneLoader.BachDang, LocationId.BachDang, false),
         new RouteOption("DEV: Test Ending", SceneLoader.Ending, LocationId.None, true)
     };
 
@@ -204,14 +200,13 @@ public class BusHubRouteMapUI : MonoBehaviour
 
     private Vector2 GetButtonPosition(int index)
     {
-        if (index == 6)
+        if (visibleRoutes[index].developerOnly)
         {
             return new Vector2(0f, -120f);
         }
 
-        int row = index / 3;
-        int column = index % 3;
-        return new Vector2(-240f + column * 240f, 75f - row * 110f);
+        int column = index % 2;
+        return new Vector2(-140f + column * 280f, 35f);
     }
 
     private Color GetRouteColor(LocationId locationId)

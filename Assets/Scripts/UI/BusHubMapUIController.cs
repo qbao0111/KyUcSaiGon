@@ -38,11 +38,7 @@ public class BusHubMapUIController : MonoBehaviour
     private readonly RouteData[] routes =
     {
         new RouteData("RouteButton_NguyenHue", "Nguyễn Huệ", SceneLoader.NguyenHue, LocationId.NguyenHue, "Assets/Art/UI/BusHub/Routes/route_nguyen_hue.png", "Assets/Art/UI/BusHub/route_nguyen_hue.png"),
-        new RouteData("RouteButton_ChoBenThanh", "Chợ Bến Thành", SceneLoader.BenThanh, LocationId.BenThanh, "Assets/Art/UI/BusHub/Routes/route_cho_ben_thanh.png", "Assets/Art/UI/BusHub/route_cho_ben_thanh.png"),
-        new RouteData("RouteButton_DinhDocLap", "Dinh Độc Lập", SceneLoader.DinhDocLap, LocationId.DinhDocLap, "Assets/Art/UI/BusHub/Routes/route_dinh_doc_lap.png", "Assets/Art/UI/BusHub/route_dinh_doc_lap.png"),
-        new RouteData("RouteButton_NhaThoDucBa", "Nhà thờ Đức Bà", SceneLoader.NhaThoDucBa, LocationId.NhaThoDucBa, "Assets/Art/UI/BusHub/Routes/route_nha_tho_duc_ba.png", "Assets/Art/UI/BusHub/route_nha_tho_duc_ba.png"),
-        new RouteData("RouteButton_Bitexco", "Bitexco", SceneLoader.Bitexco, LocationId.Bitexco, "Assets/Art/UI/BusHub/Routes/route_bitexco.png", "Assets/Art/UI/BusHub/route_bitexco.png"),
-        new RouteData("RouteButton_BenBachDang", "Bến Bạch Đằng", SceneLoader.BachDang, LocationId.BachDang, "Assets/Art/UI/BusHub/Routes/route_ben_bach_dang.png", "Assets/Art/UI/BusHub/route_ben_bach_dang.png")
+        new RouteData("RouteButton_NhaThoDucBa", "Nhà thờ Đức Bà", SceneLoader.NhaThoDucBa, LocationId.NhaThoDucBa, "Assets/Art/UI/BusHub/Routes/route_nha_tho_duc_ba.png", "Assets/Art/UI/BusHub/route_nha_tho_duc_ba.png")
     };
 
     private readonly List<BusHubRouteButtonUI> routeButtons = new List<BusHubRouteButtonUI>();
@@ -321,12 +317,8 @@ public class BusHubMapUIController : MonoBehaviour
 
         Vector2[] positions =
         {
-            new Vector2(-235f, 180f),
-            new Vector2(235f, 180f),
-            new Vector2(-235f, 0f),
-            new Vector2(235f, 0f),
-            new Vector2(-235f, -180f),
-            new Vector2(235f, -180f)
+            new Vector2(-235f, 80f),
+            new Vector2(235f, 80f)
         };
 
         routeButtons.Clear();

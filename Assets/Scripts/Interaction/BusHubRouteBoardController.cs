@@ -274,7 +274,7 @@ public class BusHubRouteBoardController : MonoBehaviour
 
     private IEnumerator LoadEndingAfterDelay()
     {
-        UIManager.Instance?.ShowDialogue("6 mảnh ký ức đã hội tụ. Xe buýt sẽ khởi hành chuyến cuối.");
+        UIManager.Instance?.ShowDialogue("2 ký ức quan trọng đã hội tụ. Xe buýt sẽ khởi hành chuyến cuối.");
         yield return new WaitForSeconds(3f);
         SceneLoader.Load(SceneLoader.Ending);
     }

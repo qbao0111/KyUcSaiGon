@@ -25,7 +25,7 @@ public class EndingSceneController : MonoBehaviour
             returnTrigger.SetActive(false);
         }
 
-        if (!DeveloperMode.IsEnabled && (GameProgressManager.Instance == null || GameProgressManager.Instance.memoryFragmentsCollected < 6))
+        if (!DeveloperMode.IsEnabled && (GameProgressManager.Instance == null || !GameProgressManager.Instance.AreAllMemoriesRestored()))
         {
             StartCoroutine(ReturnToHubIfNotEnoughMemory());
             return;
