@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
@@ -51,6 +52,7 @@ public class UIManager : MonoBehaviour
     private bool isMixerUiActive;
     private SpeakerMixerPuzzleUI activeSpeakerMixer;
     private RectTransform hudStatusPanel;
+    private RectTransform hudAccentBar;
 
     private class MixerColumnUi
     {
@@ -1149,6 +1151,11 @@ public class UIManager : MonoBehaviour
 
     private void NormalizeHudLayout()
     {
+        if (!ShouldUseCinematicHud())
+        {
+            return;
+        }
+
         CanvasScaler scaler = GetComponentInParent<CanvasScaler>();
         if (scaler != null)
         {
@@ -1158,8 +1165,8 @@ public class UIManager : MonoBehaviour
         }
 
         EnsureHudStatusPanel();
-        ConfigureTopLeftHudText(memoryProgressText, new Vector2(34f, -30f), new Vector2(500f, 28f), 16);
-        ConfigureTopLeftHudText(objectiveText, new Vector2(34f, -58f), new Vector2(560f, 46f), 17);
+        ConfigureTopLeftHudText(memoryProgressText, new Vector2(56f, -22f), new Vector2(430f, 24f), 14);
+        ConfigureTopLeftHudText(objectiveText, new Vector2(56f, -48f), new Vector2(470f, 34f), 15);
 
         RectTransform promptRect = interactionPromptText != null ? interactionPromptText.GetComponent<RectTransform>() : null;
         if (promptRect != null)
@@ -1177,6 +1184,14 @@ public class UIManager : MonoBehaviour
             interactionPromptText.alignment = TextAnchor.MiddleCenter;
             EnsureShadow(interactionPromptText, new Color(0f, 0f, 0f, 0.75f), new Vector2(2f, -2f));
         }
+    }
+
+    private bool ShouldUseCinematicHud()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
+        return sceneName == SceneLoader.BusHub
+            || sceneName == SceneLoader.NguyenHue
+            || sceneName == SceneLoader.Ending;
     }
 
     private void ConfigureTopLeftHudText(Text text, Vector2 anchoredPosition, Vector2 size, int fontSize)
@@ -1199,12 +1214,13 @@ public class UIManager : MonoBehaviour
         rect.sizeDelta = size;
 
         text.fontSize = fontSize;
-        text.color = new Color(1f, 1f, 1f, 0.96f);
+        text.fontStyle = FontStyle.Normal;
+        text.color = new Color(0.98f, 0.94f, 0.86f, 0.96f);
         text.alignment = TextAnchor.UpperLeft;
         text.horizontalOverflow = HorizontalWrapMode.Wrap;
         text.verticalOverflow = VerticalWrapMode.Truncate;
-        EnsureShadow(text, new Color(0f, 0f, 0f, 0.72f), new Vector2(1.5f, -1.5f));
-        EnsureOutline(text, new Color(0f, 0f, 0f, 0.35f), new Vector2(1f, -1f));
+        EnsureShadow(text, new Color(0f, 0f, 0f, 0.8f), new Vector2(1.25f, -1.25f));
+        EnsureOutline(text, new Color(0f, 0f, 0f, 0.28f), new Vector2(0.75f, -0.75f));
     }
 
     private void EnsureHudStatusPanel()
@@ -1243,14 +1259,52 @@ public class UIManager : MonoBehaviour
         hudStatusPanel.anchorMin = new Vector2(0f, 1f);
         hudStatusPanel.anchorMax = new Vector2(0f, 1f);
         hudStatusPanel.pivot = new Vector2(0f, 1f);
-        hudStatusPanel.anchoredPosition = new Vector2(20f, -20f);
-        hudStatusPanel.sizeDelta = new Vector2(610f, 94f);
+        hudStatusPanel.anchoredPosition = new Vector2(24f, -24f);
+        hudStatusPanel.sizeDelta = new Vector2(520f, 82f);
         hudStatusPanel.SetAsFirstSibling();
 
         Image panelImage = hudStatusPanel.GetComponent<Image>();
         if (panelImage != null)
         {
-            panelImage.color = new Color(0.03f, 0.025f, 0.02f, 0.48f);
+            panelImage.color = new Color(0.05f, 0.035f, 0.03f, 0.58f);
+        }
+
+        EnsureHudAccentBar();
+    }
+
+    private void EnsureHudAccentBar()
+    {
+        if (hudStatusPanel == null)
+        {
+            return;
+        }
+
+        if (hudAccentBar == null)
+        {
+            Transform existing = hudStatusPanel.Find("HUD_AccentBar");
+            if (existing != null)
+            {
+                hudAccentBar = existing.GetComponent<RectTransform>();
+            }
+        }
+
+        if (hudAccentBar == null)
+        {
+            GameObject accent = new GameObject("HUD_AccentBar", typeof(RectTransform), typeof(Image));
+            accent.transform.SetParent(hudStatusPanel, false);
+            hudAccentBar = accent.GetComponent<RectTransform>();
+        }
+
+        hudAccentBar.anchorMin = new Vector2(0f, 0.5f);
+        hudAccentBar.anchorMax = new Vector2(0f, 0.5f);
+        hudAccentBar.pivot = new Vector2(0f, 0.5f);
+        hudAccentBar.anchoredPosition = new Vector2(18f, 0f);
+        hudAccentBar.sizeDelta = new Vector2(5f, 48f);
+
+        Image image = hudAccentBar.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(1f, 0.68f, 0.24f, 0.86f);
         }
     }
 

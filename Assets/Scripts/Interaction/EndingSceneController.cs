@@ -15,11 +15,15 @@ public class EndingSceneController : MonoBehaviour
     public float toneShiftDuration = 2.5f;
 
     private readonly Color grayTone = new Color(0.38f, 0.4f, 0.43f);
-    private readonly Color warmTone = new Color(0.82f, 0.66f, 0.44f);
     private readonly Color shardWarm = new Color(0.96f, 0.83f, 0.36f);
+
+    private Color[] originalColors;
+    private string[] colorPropNames;
 
     private void Start()
     {
+        CacheOriginalColors();
+
         if (returnTrigger != null)
         {
             returnTrigger.SetActive(false);
@@ -44,7 +48,7 @@ public class EndingSceneController : MonoBehaviour
 
     private IEnumerator PlayEndingSequence()
     {
-        ApplyTone(grayTone);
+        ApplyToneLerp(0f);
         if (endingAmbience != null)
         {
             endingAmbience.Play();
@@ -73,7 +77,7 @@ public class EndingSceneController : MonoBehaviour
         }
 
         LightUpLandmark();
-        yield return StartCoroutine(ShiftToneToWarm());
+        yield return StartCoroutine(ShiftToneToOriginal());
 
         UIManager.Instance?.ShowDialogue("Khi ký ức được lắng nghe, thành phố lại tìm thấy màu sắc của mình.");
         yield return new WaitForSeconds(3.2f);
@@ -143,26 +147,34 @@ public class EndingSceneController : MonoBehaviour
         }
     }
 
-    private IEnumerator ShiftToneToWarm()
+    private IEnumerator ShiftToneToOriginal()
     {
         float elapsed = 0f;
         while (elapsed < toneShiftDuration)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / toneShiftDuration);
-            ApplyTone(Color.Lerp(grayTone, warmTone, t));
+            ApplyToneLerp(t);
             yield return null;
         }
 
-        ApplyTone(warmTone);
+        ApplyToneLerp(1f);
     }
 
-    private void ApplyTone(Color target)
+    private void CacheOriginalColors()
     {
+        if (originalColors != null && colorPropNames != null)
+        {
+            return;
+        }
+
         if (renderersToWarm == null)
         {
             return;
         }
+
+        originalColors = new Color[renderersToWarm.Length];
+        colorPropNames = new string[renderersToWarm.Length];
 
         for (int i = 0; i < renderersToWarm.Length; i++)
         {
@@ -172,8 +184,68 @@ public class EndingSceneController : MonoBehaviour
                 continue;
             }
 
-            Color baseColor = r.material.color;
-            r.material.color = Color.Lerp(baseColor, target, 0.18f);
+            Material material = r.material;
+            if (material != null)
+            {
+                string propName = null;
+                if (material.HasProperty("_BaseColor"))
+                {
+                    propName = "_BaseColor";
+                }
+                else if (material.HasProperty("_Color"))
+                {
+                    propName = "_Color";
+                }
+                colorPropNames[i] = propName;
+
+                if (propName != null)
+                {
+                    originalColors[i] = material.GetColor(propName);
+                }
+                else
+                {
+                    originalColors[i] = Color.white;
+                }
+            }
+            else
+            {
+                originalColors[i] = Color.white;
+            }
+        }
+    }
+
+    private void ApplyToneLerp(float t)
+    {
+        CacheOriginalColors();
+
+        if (renderersToWarm == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < renderersToWarm.Length; i++)
+        {
+            Renderer r = renderersToWarm[i];
+            string propName = colorPropNames != null && i < colorPropNames.Length ? colorPropNames[i] : null;
+
+            if (r == null || propName == null)
+            {
+                continue;
+            }
+
+            Color originalColor = originalColors != null && i < originalColors.Length ? originalColors[i] : Color.white;
+
+            // Calculate monochrome desaturated tone of the original color
+            float luminance = originalColor.r * 0.299f + originalColor.g * 0.587f + originalColor.b * 0.114f;
+            Color desaturated = new Color(luminance, luminance, luminance, originalColor.a);
+
+            // Blend desaturated color with grayTone (tint) for initial state (t=0)
+            Color grayVersion = Color.Lerp(desaturated, grayTone, 0.2f);
+            
+            // Lerp from the gray version to the original color based on t
+            Color targetColor = Color.Lerp(grayVersion, originalColor, t);
+            
+            r.material.SetColor(propName, targetColor);
         }
     }
 }
