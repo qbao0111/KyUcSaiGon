@@ -1213,7 +1213,7 @@ public static class KyUcSaiGonSceneGenerator
         interactable.puzzleDescription = "Sắp xếp 6 tiếng chuông theo thứ tự đúng.";
         interactable.correctAnswer = "La-Sol-Re-Mi-Si-Do";
         interactable.inputHint = "La-Sol-Re-Mi-Si-Do";
-        interactable.quickChoices = new[] { "La", "Sol", "Re", "Mi", "Si", "Do" };
+        interactable.quickChoices = new[] { "Sol", "La", "Si", "Do", "Re", "Mi" };
         interactable.wrongFeedback = "Thứ tự chuông chưa tạo được hòa âm bình yên.";
         interactable.correctFeedback = "Hòa âm chính xác. Tháp chuông đã thức giấc.";
 
