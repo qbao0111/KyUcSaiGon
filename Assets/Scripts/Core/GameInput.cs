@@ -157,7 +157,16 @@ public static class CursorLockManager
         SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
         EnsureRuntimeEnforcer();
-        LockForGameplay();
+
+        string activeScene = SceneManager.GetActiveScene().name;
+        if (activeScene == "Scene_MainMenu" || activeScene == "Scene_Loading")
+        {
+            UnlockForUI();
+        }
+        else
+        {
+            LockForGameplay();
+        }
     }
 
     public static void LockForGameplay()
@@ -188,7 +197,15 @@ public static class CursorLockManager
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         EnsureRuntimeEnforcer();
-        LockForGameplay();
+
+        if (scene.name == "Scene_MainMenu" || scene.name == "Scene_Loading")
+        {
+            UnlockForUI();
+        }
+        else
+        {
+            LockForGameplay();
+        }
     }
 
     private static void EnsureRuntimeEnforcer()
@@ -208,6 +225,12 @@ public class CursorLockRuntimeEnforcer : MonoBehaviour
 {
     private void Update()
     {
+        string activeScene = SceneManager.GetActiveScene().name;
+        if (activeScene == "Scene_MainMenu" || activeScene == "Scene_Loading")
+        {
+            return;
+        }
+
         bool inputBlocked = UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput;
         CursorLockManager.EnsureGameplayLock(inputBlocked);
     }
@@ -215,6 +238,12 @@ public class CursorLockRuntimeEnforcer : MonoBehaviour
     private void OnApplicationFocus(bool hasFocus)
     {
         if (!hasFocus)
+        {
+            return;
+        }
+
+        string activeScene = SceneManager.GetActiveScene().name;
+        if (activeScene == "Scene_MainMenu" || activeScene == "Scene_Loading")
         {
             return;
         }

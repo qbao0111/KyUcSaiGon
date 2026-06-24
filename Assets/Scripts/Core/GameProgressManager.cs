@@ -102,7 +102,7 @@ public class GameProgressManager : MonoBehaviour
         return collectedFragments;
     }
 
-    public void ResetProgressForTesting()
+    public void ResetProgressForNewGame()
     {
         foreach (LocationProgress progress in locationStates)
         {

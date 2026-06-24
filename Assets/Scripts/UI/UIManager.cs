@@ -1224,6 +1224,7 @@ public class UIManager : MonoBehaviour
         rect.anchoredPosition = anchoredPosition;
         rect.sizeDelta = size;
 
+        text.font = GameUIFont.Regular;
         text.fontSize = fontSize;
         text.fontStyle = FontStyle.Normal;
         text.color = new Color(0.98f, 0.94f, 0.86f, 0.96f);

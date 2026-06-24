@@ -2094,7 +2094,7 @@ public static class KyUcSaiGonSceneGenerator
         GameObject obj = new GameObject(name, typeof(RectTransform));
         obj.transform.SetParent(parent, false);
         Text uiText = obj.AddComponent<Text>();
-        uiText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        uiText.font = GameUIFont.Regular;
         uiText.text = text;
         uiText.fontSize = fontSize;
         uiText.color = Color.white;

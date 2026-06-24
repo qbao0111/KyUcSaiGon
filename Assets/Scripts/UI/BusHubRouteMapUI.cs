@@ -227,7 +227,7 @@ public class BusHubRouteMapUI : MonoBehaviour
 
         Text textComponent = textObject.AddComponent<Text>();
         textComponent.text = text;
-        textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        textComponent.font = GameUIFont.Regular;
         textComponent.fontSize = fontSize;
         textComponent.color = Color.white;
         textComponent.alignment = anchor;

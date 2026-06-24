@@ -1,6 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class EndingSceneController : MonoBehaviour
 {
@@ -12,6 +17,7 @@ public class EndingSceneController : MonoBehaviour
     public GameObject returnTrigger;
     public Renderer[] renderersToWarm;
     public AudioSource endingAmbience;
+    public Sprite completedEndingBackground;
 
     [Header("Settings")]
     public float shardStepDelay = 0.9f;
@@ -38,6 +44,38 @@ public class EndingSceneController : MonoBehaviour
     private Light sunLight;
     private readonly List<Light> sunsetDiscLights = new List<Light>();
     private readonly List<float> originalSunsetDiscIntensities = new List<float>();
+    private GameObject completedPanel;
+    private Button[] completedButtons;
+    private int selectedCompletedButtonIndex;
+    private bool completedScreenActive;
+    private readonly Color completedButtonNormal = new Color(0.08f, 0.085f, 0.09f, 0.72f);
+    private readonly Color completedButtonSelected = new Color(0.82f, 0.84f, 0.84f, 0.55f);
+
+    private void Update()
+    {
+        if (!completedScreenActive || completedButtons == null || completedButtons.Length == 0)
+        {
+            return;
+        }
+
+        if (CompletedUpPressed())
+        {
+            MoveCompletedSelection(-1);
+        }
+        else if (CompletedDownPressed())
+        {
+            MoveCompletedSelection(1);
+        }
+
+        if (CompletedSubmitPressed())
+        {
+            Button selectedButton = GetSelectedCompletedButton();
+            if (selectedButton != null && selectedButton.interactable)
+            {
+                selectedButton.onClick.Invoke();
+            }
+        }
+    }
 
     private void Awake()
     {
@@ -255,12 +293,301 @@ public class EndingSceneController : MonoBehaviour
         yield return new WaitForSeconds(3.2f);
         UIManager.Instance?.ShowDialogue("Tương lai không bắt đầu bằng việc quên đi quá khứ.\nTương lai bắt đầu khi ta biết mang ký ức đi cùng.");
         yield return new WaitForSeconds(3.4f);
-        UIManager.Instance?.SetObjective("Tiến đến cổng sáng để quay lại xe buýt ký ức.");
+        yield return StartCoroutine(ShowGameCompletedPanelRoutine());
+    }
 
-        if (returnTrigger != null)
+    private IEnumerator ShowGameCompletedPanelAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        ShowGameCompletedPanel();
+    }
+
+    private void ShowGameCompletedPanel()
+    {
+        StartCoroutine(ShowGameCompletedPanelRoutine());
+    }
+
+    private IEnumerator ShowGameCompletedPanelRoutine()
+    {
+        // Freeze player character
+        ThirdPersonPlayerController playerController = FindFirstObjectByType<ThirdPersonPlayerController>();
+        if (playerController != null)
         {
-            returnTrigger.SetActive(true);
+            playerController.enabled = false;
+            AudioManager.EnsureInstance()?.SetFootstepsMoving(false);
         }
+
+        // Block input and release cursor via UIManager
+        UIManager.Instance?.SetExternalInputBlocked(true);
+
+        // Find existing canvas or create one
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+        {
+            GameObject go = new GameObject("EndingCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        }
+        canvas.sortingOrder = 500;
+        CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
+        if (scaler == null)
+        {
+            scaler = canvas.gameObject.AddComponent<CanvasScaler>();
+        }
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        if (completedPanel != null)
+        {
+            Destroy(completedPanel);
+        }
+
+        // Create fullscreen completed panel.
+        GameObject panelObj = new GameObject("GameCompletedPanel", typeof(RectTransform), typeof(CanvasGroup));
+        completedPanel = panelObj;
+        panelObj.transform.SetParent(canvas.transform, false);
+        
+        RectTransform rect = panelObj.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        CanvasGroup group = panelObj.GetComponent<CanvasGroup>();
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = true;
+
+        Image bgImage = CreateCompletedImage(panelObj.transform, "CompletedBackground", completedEndingBackground, Color.white);
+        Stretch(bgImage.rectTransform);
+        bgImage.preserveAspect = true;
+        if (completedEndingBackground != null)
+        {
+            AspectRatioFitter fitter = bgImage.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = completedEndingBackground.rect.width / Mathf.Max(1f, completedEndingBackground.rect.height);
+        }
+
+        // Only add actions. The completed artwork already contains the ending copy.
+        GameObject container = new GameObject("Container", typeof(RectTransform));
+        container.transform.SetParent(panelObj.transform, false);
+        RectTransform containerRect = container.GetComponent<RectTransform>();
+        containerRect.anchorMin = new Vector2(0f, 0f);
+        containerRect.anchorMax = new Vector2(0f, 0f);
+        containerRect.pivot = new Vector2(0f, 0f);
+        containerRect.anchoredPosition = new Vector2(96f, 230f);
+        containerRect.sizeDelta = new Vector2(560f, 140f);
+
+        Button mainMenuButton = CreateCompletedButton(container.transform, "MainMenuButton", "VỀ MÀN HÌNH CHÍNH", new Vector2(0f, 0f), () =>
+        {
+            AudioManager.EnsureInstance()?.PlaySfx("SFX_MapSelect", 1.0f);
+            UIManager.Instance?.SetExternalInputBlocked(false);
+            SceneLoader.Load(SceneLoader.MainMenu);
+        });
+        Button quitButton = CreateCompletedButton(container.transform, "QuitButton", "THOÁT GAME", new Vector2(0f, -76f), () =>
+        {
+            AudioManager.EnsureInstance()?.PlaySfx("SFX_BusDepart", 1.0f);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        });
+
+        completedButtons = new[] { mainMenuButton, quitButton };
+        selectedCompletedButtonIndex = 0;
+        completedScreenActive = true;
+        SelectCompletedButton(0, false);
+
+        // Explicitly unlock cursor just to be doubly sure
+        CursorLockManager.UnlockForUI();
+
+        AudioManager.EnsureInstance()?.StopAmbience(1.2f);
+
+        float elapsed = 0f;
+        const float fadeDuration = 1.25f;
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            group.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / fadeDuration));
+            yield return null;
+        }
+
+        group.alpha = 1f;
+        group.interactable = true;
+    }
+
+    private Button CreateCompletedButton(Transform parent, string name, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(parent, false);
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = new Vector2(520f, 58f);
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = completedButtonNormal;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(onClick);
+
+        Image tick = CreateCompletedImage(buttonObject.transform, "GoldTick", null, new Color(0.86f, 0.6f, 0.22f, 0.95f));
+        RectTransform tickRect = tick.rectTransform;
+        tickRect.anchorMin = new Vector2(0f, 0f);
+        tickRect.anchorMax = new Vector2(0f, 1f);
+        tickRect.offsetMin = new Vector2(0f, 8f);
+        tickRect.offsetMax = new Vector2(4f, -8f);
+
+        GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+        textObject.transform.SetParent(buttonObject.transform, false);
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(24f, 0f);
+        textRect.offsetMax = new Vector2(-16f, 0f);
+
+        Text text = textObject.GetComponent<Text>();
+        text.text = label;
+        text.font = GameUIFont.Bold;
+        text.fontSize = 28;
+        text.fontStyle = FontStyle.Bold;
+        text.alignment = TextAnchor.MiddleLeft;
+        text.color = new Color(0.92f, 0.93f, 0.9f, 1f);
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+        return button;
+    }
+
+    private void MoveCompletedSelection(int direction)
+    {
+        if (completedButtons == null || completedButtons.Length == 0)
+        {
+            return;
+        }
+
+        selectedCompletedButtonIndex = (selectedCompletedButtonIndex + direction + completedButtons.Length) % completedButtons.Length;
+        SelectCompletedButton(selectedCompletedButtonIndex, true);
+    }
+
+    private void SelectCompletedButton(int index, bool playSound)
+    {
+        selectedCompletedButtonIndex = Mathf.Clamp(index, 0, completedButtons.Length - 1);
+        UpdateCompletedButtonVisuals();
+        EventSystem.current?.SetSelectedGameObject(null);
+
+        if (playSound)
+        {
+            AudioManager.EnsureInstance()?.PlaySfx("SFX_ItemCollect_Memory", 0.55f);
+        }
+    }
+
+    private Button GetSelectedCompletedButton()
+    {
+        if (completedButtons == null || selectedCompletedButtonIndex < 0 || selectedCompletedButtonIndex >= completedButtons.Length)
+        {
+            return null;
+        }
+
+        return completedButtons[selectedCompletedButtonIndex];
+    }
+
+    private void UpdateCompletedButtonVisuals()
+    {
+        if (completedButtons == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < completedButtons.Length; i++)
+        {
+            if (completedButtons[i] == null)
+            {
+                continue;
+            }
+
+            if (completedButtons[i].targetGraphic is Image image)
+            {
+                image.color = i == selectedCompletedButtonIndex ? completedButtonSelected : completedButtonNormal;
+            }
+        }
+    }
+
+    private static bool CompletedUpPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && (Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.upArrowKey.wasPressedThisFrame))
+        {
+            return true;
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
+#else
+        return false;
+#endif
+    }
+
+    private static bool CompletedDownPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && (Keyboard.current.sKey.wasPressedThisFrame || Keyboard.current.downArrowKey.wasPressedThisFrame))
+        {
+            return true;
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
+#else
+        return false;
+#endif
+    }
+
+    private static bool CompletedSubmitPressed()
+    {
+        if (GameInput.SubmitPressed || GameInput.InteractPressed)
+        {
+            return true;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(KeyCode.Space);
+#else
+        return false;
+#endif
+    }
+
+    private static Image CreateCompletedImage(Transform parent, string name, Sprite sprite, Color color)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Image image = go.GetComponent<Image>();
+        image.sprite = sprite;
+        image.color = color;
+        image.raycastTarget = false;
+        return image;
+    }
+
+    private static void Stretch(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.localScale = Vector3.one;
     }
 
     private void CacheAndDimLights()
