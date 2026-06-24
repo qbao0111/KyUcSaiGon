@@ -33,6 +33,13 @@ public class UIManager : MonoBehaviour
     public Button closePuzzleButton;
     public SpeakerMixerPuzzleUI speakerMixerPrefab;
 
+    [Header("Cathedral Bell Puzzle Art (Scene 04 only)")]
+    public Sprite cathedralPuzzleBackground;
+    public Sprite cathedralBellBackground;
+    public Sprite cathedralBellIcon;
+    public Sprite cathedralBellPull;
+    public Sprite cathedralBellPullBackground;
+
     public bool externalInputBlocked;
     public bool IsBlockingPlayerInput => externalInputBlocked || (puzzlePanel != null && puzzlePanel.activeSelf);
 
@@ -51,6 +58,7 @@ public class UIManager : MonoBehaviour
     private Coroutine mixerFeedbackRoutine;
     private bool isMixerUiActive;
     private SpeakerMixerPuzzleUI activeSpeakerMixer;
+    private BellSequencePuzzleUI activeBellSequence;
     private RectTransform hudStatusPanel;
     private RectTransform hudAccentBar;
     private string currentObjectiveText;
@@ -164,7 +172,9 @@ public class UIManager : MonoBehaviour
 
         puzzlePanel.SetActive(true);
         ClearMixerPanel();
-        SetLegacyPuzzleControlsVisible(!puzzle.useThreeValueStepper);
+        ClearBellSequencePanel();
+        bool useBellSequence = IsBellSequencePuzzle(puzzle);
+        SetLegacyPuzzleControlsVisible(!puzzle.useThreeValueStepper && !useBellSequence);
 
         if (puzzleTitleText != null)
         {
@@ -179,7 +189,7 @@ public class UIManager : MonoBehaviour
         if (puzzleInput != null)
         {
             puzzleInput.text = string.Empty;
-            puzzleInput.interactable = !puzzle.useThreeValueStepper;
+            puzzleInput.interactable = !puzzle.useThreeValueStepper && !useBellSequence;
 
             Text placeholderText = puzzleInput.placeholder != null ? puzzleInput.placeholder.GetComponent<Text>() : null;
             if (placeholderText != null)
@@ -199,6 +209,10 @@ public class UIManager : MonoBehaviour
         {
             EnsureSpeakerMixerAnswer(puzzle);
             BuildThreeValueStepper(puzzle);
+        }
+        else if (useBellSequence)
+        {
+            BuildBellSequencePanel(puzzle);
         }
         else if (quickChoiceButtonPrefab != null && quickChoiceRoot != null && puzzle.quickChoices != null)
         {
@@ -223,7 +237,7 @@ public class UIManager : MonoBehaviour
         }
 
         CursorLockManager.UnlockForUI();
-        if (puzzleInput != null && puzzleInput.interactable)
+        if (puzzleInput != null && puzzleInput.interactable && puzzleInput.gameObject.activeInHierarchy)
         {
             puzzleInput.Select();
             puzzleInput.ActivateInputField();
@@ -243,6 +257,11 @@ public class UIManager : MonoBehaviour
         if (puzzleFeedbackText != null)
         {
             puzzleFeedbackText.text = solved ? activePuzzle.correctFeedback : activePuzzle.wrongFeedback;
+        }
+
+        if (activeBellSequence != null)
+        {
+            activeBellSequence.ShowResult(solved, solved ? activePuzzle.correctFeedback : activePuzzle.wrongFeedback);
         }
 
         PrototypeLogger.Info("Puzzle submit: " + activePuzzle.puzzleTitle + " | Input: " + submittedText + " | Solved: " + solved);
@@ -283,6 +302,7 @@ public class UIManager : MonoBehaviour
         }
 
         ClearMixerPanel();
+        ClearBellSequencePanel();
         SetLegacyPuzzleControlsVisible(true);
         activePuzzle = null;
         UnlockCursorIfNoPanel();
@@ -406,6 +426,29 @@ public class UIManager : MonoBehaviour
     {
         if (puzzlePanel == null || !puzzlePanel.activeSelf || puzzleInput == null)
         {
+            return;
+        }
+
+        if (activeBellSequence != null)
+        {
+            if (GameInput.SubmitPressed)
+            {
+                activeBellSequence.RequestSubmit();
+                return;
+            }
+
+            string bellToken = GameInput.PressedPuzzleToken();
+            if (!string.IsNullOrEmpty(bellToken) && int.TryParse(bellToken, out int bellNumber) && bellNumber >= 1 && bellNumber <= 6)
+            {
+                activeBellSequence.SelectBellByIndex(bellNumber - 1);
+                return;
+            }
+
+            if (GameInput.BackspacePressed)
+            {
+                activeBellSequence.UndoLast();
+            }
+
             return;
         }
 
@@ -989,6 +1032,74 @@ public class UIManager : MonoBehaviour
         if (closePuzzleButton != null)
         {
             closePuzzleButton.gameObject.SetActive(visible);
+        }
+    }
+
+    private bool IsBellSequencePuzzle(PuzzleInteractable puzzle)
+    {
+        return puzzle != null
+            && SceneManager.GetActiveScene().name == SceneLoader.NhaThoDucBa
+            && string.Equals(puzzle.correctAnswer, "La-Sol-Re-Mi-Si-Do", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void BuildBellSequencePanel(PuzzleInteractable puzzle)
+    {
+        if (puzzlePanel == null)
+        {
+            return;
+        }
+
+        puzzlePanel.transform.SetAsLastSibling();
+        CanvasScaler canvasScaler = GetComponentInParent<CanvasScaler>();
+        if (canvasScaler != null)
+        {
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1920f, 1080f);
+            canvasScaler.matchWidthOrHeight = 0.5f;
+        }
+
+        RectTransform puzzlePanelRect = puzzlePanel.GetComponent<RectTransform>();
+        if (puzzlePanelRect != null)
+        {
+            puzzlePanelRect.anchorMin = Vector2.zero;
+            puzzlePanelRect.anchorMax = Vector2.one;
+            puzzlePanelRect.offsetMin = Vector2.zero;
+            puzzlePanelRect.offsetMax = Vector2.zero;
+        }
+
+        GameObject root = new GameObject("BellSequenceRuntimeUI", typeof(RectTransform), typeof(BellSequencePuzzleUI));
+        root.transform.SetParent(puzzlePanel.transform, false);
+        root.transform.SetAsLastSibling();
+        activeBellSequence = root.GetComponent<BellSequencePuzzleUI>();
+        activeBellSequence.Bind(
+            puzzle,
+            puzzleInput,
+            SubmitPuzzle,
+            HidePuzzle,
+            cathedralPuzzleBackground,
+            cathedralBellBackground,
+            cathedralBellIcon,
+            cathedralBellPull,
+            cathedralBellPullBackground);
+    }
+
+    private void ClearBellSequencePanel()
+    {
+        if (activeBellSequence != null)
+        {
+            Destroy(activeBellSequence.gameObject);
+            activeBellSequence = null;
+        }
+
+        if (puzzlePanel == null)
+        {
+            return;
+        }
+
+        Transform staleRoot = puzzlePanel.transform.Find("BellSequenceRuntimeUI");
+        if (staleRoot != null)
+        {
+            Destroy(staleRoot.gameObject);
         }
     }
 
