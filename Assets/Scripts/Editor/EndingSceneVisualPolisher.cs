@@ -49,6 +49,9 @@ public static class EndingSceneVisualPolisher
         HideMemoryShardPlaceholders(root);
         UpdateEndingController(root);
 
+        // Automatically restore and configure the WaterPlane and Landmark 81 model
+        WaterEndingFixer.FixWaterEnding(false);
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("[KyUcSaiGon] Scene_07_Ending polished into riverside sunset viewpoint.");
@@ -57,14 +60,43 @@ public static class EndingSceneVisualPolisher
     private static void BuildRiverside(Transform parent, Material tile, Material river, Material waterGlow, Material waterDark)
     {
         Cube("REPLACE_Ending_ViewpointPlatform", parent, new Vector3(0, -0.05f, -12f), new Vector3(38f, 0.25f, 40f), tile);
-        Cube("REPLACE_Ending_PromenadeTiles_Main", parent, new Vector3(0, 0.02f, -12f), new Vector3(36f, 0.05f, 38f), tile);
-        for (int x = -14; x <= 14; x += 4)
+
+        // Grid container for modular pavement tiles
+        Transform gridParent = FindOrCreateChild(parent, "REPLACE_Ending_PromenadeTiles_Grid");
+        ClearChildren(gridParent);
+
+        // Load SM_Ending_PavementTile_2x2.glb
+        string tilePath = "Assets/Art/Models/Ending/Ground/SM_Ending_PavementTile_2x2.glb";
+        GameObject tilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tilePath);
+
+        if (tilePrefab != null)
         {
-            Cube("REPLACE_Ending_TileSeam_X_" + x, parent, new Vector3(x, 0.06f, -12f), new Vector3(0.035f, 0.04f, 37f), Mat("M_Ending_TileSeam", new Color(0.22f, 0.2f, 0.18f)));
+            Debug.Log("[KyUcSaiGon] Building pavement tile grid using SM_Ending_PavementTile_2x2.glb...");
+            // Promenade area: 36m wide (x: -17 to 17), 38m deep (z: -30 to 6)
+            for (float x = -17f; x <= 17f; x += 2f)
+            {
+                for (float z = -30f; z <= 6f; z += 2f)
+                {
+                    GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(tilePrefab, gridParent);
+                    inst.name = $"Tile_{x}_{z}";
+                    inst.transform.localPosition = new Vector3(x, 0.02f, z);
+                    inst.transform.localRotation = Quaternion.identity;
+                    inst.transform.localScale = Vector3.one;
+                }
+            }
         }
-        for (int z = -30; z <= 6; z += 4)
+        else
         {
-            Cube("REPLACE_Ending_TileSeam_Z_" + z, parent, new Vector3(0, 0.06f, z), new Vector3(35f, 0.04f, 0.035f), Mat("M_Ending_TileSeam", new Color(0.22f, 0.2f, 0.18f)));
+            Debug.LogWarning("[KyUcSaiGon] SM_Ending_PavementTile_2x2.glb not found, falling back to primitive tiles.");
+            Cube("REPLACE_Ending_PromenadeTiles_Main", parent, new Vector3(0, 0.02f, -12f), new Vector3(36f, 0.05f, 38f), tile);
+            for (int x = -14; x <= 14; x += 4)
+            {
+                Cube("REPLACE_Ending_TileSeam_X_" + x, parent, new Vector3(x, 0.06f, -12f), new Vector3(0.035f, 0.04f, 37f), Mat("M_Ending_TileSeam", new Color(0.22f, 0.2f, 0.18f)));
+            }
+            for (int z = -30; z <= 6; z += 4)
+            {
+                Cube("REPLACE_Ending_TileSeam_Z_" + z, parent, new Vector3(0, 0.06f, z), new Vector3(35f, 0.04f, 0.035f), Mat("M_Ending_TileSeam", new Color(0.22f, 0.2f, 0.18f)));
+            }
         }
 
         Cube("REPLACE_Ending_River_Saigon", parent, new Vector3(0, 0.04f, 18f), new Vector3(96f, 0.06f, 38f), river);
