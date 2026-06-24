@@ -1201,7 +1201,8 @@ public class UIManager : MonoBehaviour
         string sceneName = SceneManager.GetActiveScene().name;
         return sceneName == SceneLoader.BusHub
             || sceneName == SceneLoader.NguyenHue
-            || sceneName == SceneLoader.Ending;
+            || sceneName == SceneLoader.Ending
+            || sceneName == SceneLoader.NhaThoDucBa;
     }
 
     private void ConfigureTopLeftHudText(Text text, Vector2 anchoredPosition, Vector2 size, int fontSize)

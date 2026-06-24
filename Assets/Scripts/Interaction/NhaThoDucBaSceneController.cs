@@ -38,6 +38,12 @@ public class NhaThoDucBaSceneController : MonoBehaviour
 
     private void Awake()
     {
+        // Auto-attach restoration wave controller if not present
+        if (GetComponent<NhaThoDucBaRestorationController>() == null)
+        {
+            gameObject.AddComponent<NhaThoDucBaRestorationController>();
+        }
+
         if (pigeonFeederNpc != null)
         {
             pigeonFeederNpc.suppressDefaultDialogue = true;
@@ -143,16 +149,10 @@ public class NhaThoDucBaSceneController : MonoBehaviour
 
     private void OnRestored()
     {
-        UIManager.Instance?.ShowDialogue(restoredDialogue);
-        UIManager.Instance?.SetObjective(objectiveReturnBus);
         if (bellPuzzle != null)
         {
             bellPuzzle.gameObject.SetActive(false);
         }
-
-        if (returnBusStop != null)
-        {
-            returnBusStop.gameObject.SetActive(true);
-        }
+        // Dialogue and returnBusStop activation are now handled by NhaThoDucBaRestorationController after the 6.5s wave finishes
     }
 }
