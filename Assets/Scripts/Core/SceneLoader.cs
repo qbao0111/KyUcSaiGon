@@ -13,7 +13,20 @@ public static class SceneLoader
 
     public static void Load(string sceneName)
     {
+        sceneName = ResolveSceneRedirect(sceneName);
         PrototypeLogger.Info("Loading scene: " + sceneName);
         SceneManager.LoadScene(sceneName);
+    }
+
+    private static string ResolveSceneRedirect(string sceneName)
+    {
+        if (sceneName != BusHub || GameProgressManager.Instance == null || !GameProgressManager.Instance.AreAllMemoriesRestored())
+        {
+            return sceneName;
+        }
+
+        string currentScene = SceneManager.GetActiveScene().name;
+        bool returningFromRequiredMemoryScene = currentScene == NguyenHue || currentScene == NhaThoDucBa;
+        return returningFromRequiredMemoryScene ? Ending : sceneName;
     }
 }

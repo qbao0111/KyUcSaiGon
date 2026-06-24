@@ -1,4 +1,3 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,7 +6,6 @@ public class BusHubRouteBoardController : MonoBehaviour
 {
     private const string WorldBoardRootName = "BusHubWorldBoardRoot";
     private const string PanoramaResourcePath = "BusHub/ho-chi-minh-city";
-    private bool endingStarted;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void RegisterSceneHook()
@@ -45,7 +43,6 @@ public class BusHubRouteBoardController : MonoBehaviour
     {
         EnsureMapBoardInteractable();
         RebuildBoard();
-        CheckNormalEndingUnlock();
     }
 
     private void EnsureMapBoardInteractable()
@@ -259,23 +256,4 @@ public class BusHubRouteBoardController : MonoBehaviour
         return textMesh;
     }
 
-    private void CheckNormalEndingUnlock()
-    {
-        GameProgressManager progress = GameProgressManager.Instance;
-        if (DeveloperMode.IsEnabled || progress == null || endingStarted || !progress.AreAllMemoriesRestored())
-        {
-            return;
-        }
-
-        progress.endingUnlocked = true;
-        endingStarted = true;
-        StartCoroutine(LoadEndingAfterDelay());
-    }
-
-    private IEnumerator LoadEndingAfterDelay()
-    {
-        UIManager.Instance?.ShowDialogue("2 ký ức quan trọng đã hội tụ. Xe buýt sẽ khởi hành chuyến cuối.");
-        yield return new WaitForSeconds(3f);
-        SceneLoader.Load(SceneLoader.Ending);
-    }
 }

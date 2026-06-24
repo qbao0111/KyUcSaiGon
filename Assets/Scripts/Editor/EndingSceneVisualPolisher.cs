@@ -216,7 +216,7 @@ public static class EndingSceneVisualPolisher
 
         // Sunset disc is removed for a natural day/sky view
         RenderSettings.ambientLight = new Color(0.24f, 0.26f, 0.30f); // Neutral ambient light
-        RenderSettings.fog = true;
+        RenderSettings.fog = false;
         RenderSettings.fogColor = new Color(0.78f, 0.82f, 0.86f); // Neutral light gray-blue fog
         RenderSettings.fogDensity = 0.003f; // Lower fog density for a clearer look
     }
