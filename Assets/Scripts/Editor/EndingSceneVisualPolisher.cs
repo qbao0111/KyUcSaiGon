@@ -164,6 +164,16 @@ public static class EndingSceneVisualPolisher
         Cube("Visual_REPLACE_Ending_Boat_Hull", boat, new Vector3(20f, 0.45f, 18f), new Vector3(8f, 0.8f, 2.2f), dark);
         Cube("Visual_REPLACE_Ending_Boat_Cabin", boat, new Vector3(20f, 1.3f, 18f), new Vector3(5.5f, 1.2f, 1.6f), Mat("M_Ending_BoatCabin", new Color(0.72f, 0.62f, 0.46f)));
         Cube("Visual_REPLACE_Ending_Boat_Light", boat, new Vector3(17.4f, 2.05f, 18f), new Vector3(0.35f, 0.35f, 0.35f), gold);
+
+        // Attach BoatMovement if not already present
+        BoatMovement movement = boat.gameObject.GetComponent<BoatMovement>();
+        if (movement == null)
+        {
+            movement = boat.gameObject.AddComponent<BoatMovement>();
+        }
+        movement.speed = 2.0f;
+        movement.minX = -52f;
+        movement.maxX = 52f;
     }
 
     private static void BuildReturnTrigger(Transform returnRoot, Material gold)
