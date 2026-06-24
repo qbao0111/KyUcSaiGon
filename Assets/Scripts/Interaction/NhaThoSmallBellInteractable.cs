@@ -20,6 +20,7 @@ public class NhaThoSmallBellInteractable : MonoBehaviour, IInteractable
         }
 
         collected = true;
+        AudioManager.EnsureInstance().PlaySfx("SFX_ItemCollect_Memory", 0.9f);
         UIManager.Instance?.ShowDialogue(collectedMessage);
         sceneController?.OnSmallBellCollected();
         gameObject.SetActive(false);

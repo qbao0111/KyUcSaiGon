@@ -35,11 +35,13 @@ public class ThirdPersonPlayerController : MonoBehaviour
     {
         if (UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput)
         {
+            AudioManager.EnsureInstance().SetFootstepsMoving(false);
             return;
         }
 
         CursorLockManager.EnsureGameplayLock(false);
         MoveRelativeToCamera();
+        AudioManager.EnsureInstance().SetFootstepsMoving(controller.isGrounded && lastPlanarVelocity.sqrMagnitude > 0.04f);
     }
 
     private void MoveRelativeToCamera()

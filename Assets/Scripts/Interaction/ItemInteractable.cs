@@ -10,6 +10,7 @@ public class ItemInteractable : MonoBehaviour, IInteractable
 
     public void Interact(Interactor interactor)
     {
+        AudioManager.EnsureInstance().PlaySfx("SFX_ItemCollect_Memory", 0.9f);
         UIManager.Instance?.ShowDialogue(itemName + "\n" + inspectText);
         interacted.Invoke();
     }

@@ -34,6 +34,8 @@ public class MemoryZoneController : MonoBehaviour
 
         IsRestored = true;
         GameProgressManager.Instance?.MarkLocationRestored(locationId, memoryFragmentName);
+        AudioManager.EnsureInstance().PlaySfx("SFX_MemoryRestoreStart", 0.9f);
+        AudioManager.EnsureInstance().FadeToRestoredAmbienceForCurrentScene();
         ApplyRestoredState(true, false);
         UIManager.Instance?.ShowDialogue("Đã nhận mảnh ký ức: " + memoryFragmentName);
         UIManager.Instance?.SetObjective("Đi đến trạm xe buýt ký ức để quay lại Hub.");

@@ -39,6 +39,7 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
         GameProgressManager progress = GameProgressManager.Instance;
         bool developerMode = DeveloperMode.IsEnabled;
         PrototypeLogger.Info("Route interact: " + displayName + " -> " + targetScene);
+        AudioManager.EnsureInstance().PlaySfx("SFX_MapSelect", 0.9f);
 
         if (isDeveloperOnly)
         {
@@ -48,6 +49,7 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
                 return;
             }
 
+            AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
             SceneLoader.Load(targetScene);
             return;
         }
@@ -57,6 +59,7 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
             if (developerMode || (progress != null && progress.endingUnlocked))
             {
                 PrototypeLogger.Info("Loading ending route.");
+                AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
                 SceneLoader.Load(SceneLoader.Ending);
             }
             else
@@ -73,6 +76,7 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
             return;
         }
 
+        AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
         SceneLoader.Load(targetScene);
     }
 

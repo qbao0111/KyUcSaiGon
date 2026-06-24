@@ -53,6 +53,7 @@ public class UIManager : MonoBehaviour
     private SpeakerMixerPuzzleUI activeSpeakerMixer;
     private RectTransform hudStatusPanel;
     private RectTransform hudAccentBar;
+    private string currentObjectiveText;
 
     private class MixerColumnUi
     {
@@ -132,6 +133,12 @@ public class UIManager : MonoBehaviour
         {
             objectiveText.text = objective;
         }
+
+        if (!string.IsNullOrWhiteSpace(objective) && objective != currentObjectiveText)
+        {
+            currentObjectiveText = objective;
+            AudioManager.EnsureInstance().PlaySfx("SFX_ObjectiveUpdated", 0.75f);
+        }
     }
 
     public void RefreshProgressText()
@@ -202,6 +209,7 @@ public class UIManager : MonoBehaviour
                 button.GetComponentInChildren<Text>().text = choice;
                 button.onClick.AddListener(() =>
                 {
+                    AudioManager.EnsureInstance().PlaySfx("SFX_PuzzleButton", 0.85f);
                     if (string.IsNullOrWhiteSpace(puzzleInput.text))
                     {
                         puzzleInput.text = choice;
@@ -361,6 +369,7 @@ public class UIManager : MonoBehaviour
     private void AdjustStepperValue(int index, int amount)
     {
         stepperValues[index] = (stepperValues[index] + amount + 10) % 10;
+        AudioManager.EnsureInstance().PlaySfx("SFX_PuzzleButton", 0.85f);
         RefreshStepperInput(activePuzzle);
     }
 
@@ -414,6 +423,7 @@ public class UIManager : MonoBehaviour
                 int changedIndex = selectedStepperIndex;
                 stepperValues[selectedStepperIndex] = Mathf.Clamp(digitValue, 0, 9);
                 selectedStepperIndex = (selectedStepperIndex + 1) % stepperValues.Length;
+                AudioManager.EnsureInstance().PlaySfx("SFX_PuzzleButton", 0.85f);
                 RefreshStepperInput(activePuzzle);
                 AnimateMixerValueChange(changedIndex);
                 return;

@@ -35,6 +35,7 @@ public class PuzzleInteractable : MonoBehaviour, IInteractable
 
         if (solved)
         {
+            AudioManager.EnsureInstance().PlaySfx("SFX_PuzzleSolved", 0.95f);
             memoryZone?.RestoreZone();
         }
 

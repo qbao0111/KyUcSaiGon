@@ -109,6 +109,7 @@ public class NguyenHueRestorationController : MonoBehaviour
     private IEnumerator RestoreWaveRoutine()
     {
         State = RestorationState.Restoring;
+        AudioManager.EnsureInstance().PlaySfx("SFX_MemoryRestoreWave", 0.95f);
         SetBusStopVisible(false);
         UIManager.Instance?.SetObjective("Ký ức đang trở lại với phố đi bộ...");
 

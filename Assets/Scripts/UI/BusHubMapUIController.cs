@@ -162,11 +162,13 @@ public class BusHubMapUIController : MonoBehaviour
     {
         confirmingRoute = true;
         PrototypeLogger.Info("BusHub route selected: " + routeButton.displayName + " -> " + routeButton.sceneName);
+        AudioManager.EnsureInstance().PlaySfx("SFX_MapSelect", 0.9f);
         yield return routeButton.AnimatePressed();
 
         overlayRoot.SetActive(false);
         UIManager.Instance?.SetExternalInputBlocked(false);
         CursorLockManager.LockForGameplay();
+        AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
         SceneLoader.Load(routeButton.sceneName);
     }
 
@@ -414,9 +416,11 @@ public class BusHubMapUIController : MonoBehaviour
         devEndingButton.onClick.AddListener(() =>
         {
             confirmingRoute = true;
+            AudioManager.EnsureInstance().PlaySfx("SFX_MapSelect", 0.9f);
             overlayRoot.SetActive(false);
             UIManager.Instance?.SetExternalInputBlocked(false);
             CursorLockManager.LockForGameplay();
+            AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
             SceneLoader.Load(SceneLoader.Ending);
         });
     }

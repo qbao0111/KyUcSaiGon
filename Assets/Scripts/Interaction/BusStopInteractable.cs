@@ -40,6 +40,7 @@ public class BusStopInteractable : MonoBehaviour, IInteractable
             return;
         }
 
+        AudioManager.EnsureInstance().PlaySfx("SFX_BusDepart", 0.8f);
         SceneLoader.Load(targetScene);
     }
 

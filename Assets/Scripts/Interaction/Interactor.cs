@@ -32,6 +32,7 @@ public class Interactor : MonoBehaviour
         if (currentInteractable != null && GameInput.InteractPressed)
         {
             PrototypeLogger.Info("Interact pressed on: " + currentInteractable.GetType().Name);
+            AudioManager.EnsureInstance().PlaySfx("SFX_Interact_E", 0.9f);
             currentInteractable.Interact(this);
         }
     }
