@@ -9,15 +9,27 @@ public class WaterEndingFixer
     [MenuItem("KyUcSaiGon/Restore and Fix Ending Scene")]
     public static void FixWaterEnding()
     {
+        FixWaterEnding(true);
+    }
+
+    public static void FixWaterEnding(bool openScene)
+    {
         Debug.Log("Starting Ending Scene Restoration and Fix...");
         
-        // Open the scene
-        string scenePath = "Assets/Scenes/Scene_07_Ending.unity";
-        var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-        if (!scene.IsValid())
+        UnityEngine.SceneManagement.Scene scene = default;
+        if (openScene)
         {
-            Debug.LogError("Failed to open scene: " + scenePath);
-            return;
+            string scenePath = "Assets/Scenes/Scene_07_Ending.unity";
+            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            if (!scene.IsValid())
+            {
+                Debug.LogError("Failed to open scene: " + scenePath);
+                return;
+            }
+        }
+        else
+        {
+            scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         }
 
         // 1. Recreate or find WaterPlane
