@@ -1,8 +1,10 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EndingSceneController : MonoBehaviour
 {
+    [Header("References")]
     public GameObject landmarkTower;
     public GameObject[] memoryShards;
     public string[] memoryNames;
@@ -11,30 +13,98 @@ public class EndingSceneController : MonoBehaviour
     public Renderer[] renderersToWarm;
     public AudioSource endingAmbience;
 
+    [Header("Settings")]
     public float shardStepDelay = 0.9f;
     public float toneShiftDuration = 2.5f;
 
     private readonly Color grayTone = new Color(0.38f, 0.4f, 0.43f);
     private readonly Color shardWarm = new Color(0.96f, 0.83f, 0.36f);
 
-    private Color[] originalColors;
-    private string[] colorPropNames;
+    // Group cached renderers for cinematic wave restoration
+    private readonly List<RendererMemory> cachedRenderers = new List<RendererMemory>();
+    private readonly List<RendererMemory> boatGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> redboatGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> causaigonGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> villaGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> landmarkGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> otherGroup = new List<RendererMemory>();
+
+    // Cached boat gameobjects for dynamic zoom positioning
+    private GameObject boatObj;
+    private GameObject redboatObj;
+
+    // Light states for u ám desaturated look
+    private float originalSunIntensity = 1f;
+    private Light sunLight;
+    private readonly List<Light> sunsetDiscLights = new List<Light>();
+    private readonly List<float> originalSunsetDiscIntensities = new List<float>();
+
+    private void Awake()
+    {
+        // Cache boat and redboat references
+        boatObj = GameObject.Find("SceneBlockoutRoot/RiversidePropRoot/boat") ?? GameObject.Find("boat");
+        redboatObj = GameObject.Find("redboat");
+
+        // Gather all renderers dynamically at runtime to ensure we don't miss redboat or new elements
+        List<Renderer> allRenderers = new List<Renderer>();
+        foreach (Renderer r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            if (r == null || r.gameObject.layer == LayerMask.NameToLayer("UI"))
+            {
+                continue;
+            }
+
+            string path = GetPath(r.transform);
+            if (path.Contains("REPLACE_Player_Character") || 
+                path.Contains("Visual_Player_AoDai") || 
+                path.Contains("Player_CameraTarget") || 
+                path.Contains("Invisible") ||
+                path.Contains("Trigger"))
+            {
+                continue;
+            }
+
+            allRenderers.Add(r);
+        }
+        renderersToWarm = allRenderers.ToArray();
+
+        // Initialize RendererMemory cache
+        cachedRenderers.Clear();
+        foreach (Renderer r in renderersToWarm)
+        {
+            if (r == null) continue;
+            RendererMemory mem = new RendererMemory(r);
+            if (mem.HasAnyMaterial)
+            {
+                cachedRenderers.Add(mem);
+            }
+        }
+
+        // Categorize into restoration wave groups
+        CategorizeGroups();
+    }
 
     private void Start()
     {
-        CacheOriginalColors();
-
         if (returnTrigger != null)
         {
             returnTrigger.SetActive(false);
         }
+
+        // Apply desaturated lost-memory look and dim lights immediately when scene starts
+        ApplyGrayMemoryInstant();
+        CacheAndDimLights();
+        UIManager.Instance?.SetObjective("Tìm kiếm điểm ký ức lấp lánh ở lan can bờ sông.");
 
         if (!DeveloperMode.IsEnabled && (GameProgressManager.Instance == null || !GameProgressManager.Instance.AreAllMemoriesRestored()))
         {
             StartCoroutine(ReturnToHubIfNotEnoughMemory());
             return;
         }
+    }
 
+    public void TriggerEndingSequence()
+    {
         StartCoroutine(PlayEndingSequence());
     }
 
@@ -48,16 +118,29 @@ public class EndingSceneController : MonoBehaviour
 
     private IEnumerator PlayEndingSequence()
     {
-        ApplyToneLerp(0f);
-        if (endingAmbience != null)
+        // 1. Disable Player movement and Camera tracking immediately when entering cinema
+        ThirdPersonPlayerController playerController = FindFirstObjectByType<ThirdPersonPlayerController>();
+        ThirdPersonCamera playerCamera = FindFirstObjectByType<ThirdPersonCamera>();
+
+        if (playerController != null)
         {
-            endingAmbience.Play();
-            endingAmbience.volume = 0f;
+            playerController.enabled = false;
+            AudioManager.EnsureInstance()?.SetFootstepsMoving(false);
         }
+        if (playerCamera != null) playerCamera.enabled = false;
+
+        Camera mainCam = Camera.main;
+        Vector3 startCamPos = mainCam != null ? mainCam.transform.position : Vector3.zero;
+        Quaternion startCamRot = mainCam != null ? mainCam.transform.rotation : Quaternion.identity;
+
+        // Play memory awakening sound immediately upon interaction
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_MemoryAwakening", 1.0f);
+        AudioManager.EnsureInstance()?.StopAmbience(1.0f);
 
         UIManager.Instance?.SetObjective("Lắng nghe những mảnh ký ức của thành phố.");
 
-        if (memoryShards != null)
+        // Lit up shards if present
+        if (memoryShards != null && memoryShards.Length > 0)
         {
             for (int i = 0; i < memoryShards.Length; i++)
             {
@@ -67,28 +150,259 @@ public class EndingSceneController : MonoBehaviour
                     UIManager.Instance?.ShowDialogue(memoryNames[i]);
                 }
 
-                if (endingAmbience != null)
-                {
-                    endingAmbience.volume = Mathf.Clamp01((i + 1) / 6f) * 0.42f;
-                }
-
                 yield return new WaitForSeconds(shardStepDelay);
             }
         }
 
-        LightUpLandmark();
-        yield return StartCoroutine(ShiftToneToOriginal());
+        yield return new WaitForSeconds(0.8f);
 
+        // 2. Play main dialogue
+        UIManager.Instance?.ShowDialogue("BẠN ĐÃ TÌM LẠI KÝ ỨC ĐÔ THỊ\nTHÀNH PHỐ ĐÃ SỐNG TRỞ LẠI");
+        yield return new WaitForSeconds(3.5f);
+
+        // Stop boat movement during the cinematic cutscene
+        BoatMovement[] boatMovements = FindObjectsByType<BoatMovement>(FindObjectsSortMode.None);
+        foreach (var bm in boatMovements)
+        {
+            bm.isMoving = false;
+        }
+
+        // Play the restoration cinematic wave sound throughout the zoom process
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_RestorationCinematicWave", 1.0f);
+
+        // --- STEP A: Zoom to boat ---
+        UIManager.Instance?.ShowDialogue("Dòng chảy ký ức đánh thức những chuyến tàu...");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        // Calculate camera position dynamically relative to the boat's current position
+        Vector3 currentBoatPos = boatObj != null ? boatObj.transform.position : new Vector3(15.57f, 0.8f, 21.8f);
+        Vector3 boatCamPos = currentBoatPos + new Vector3(0f, 2.0f, -9.8f);
+        Quaternion boatCamRot = Quaternion.LookRotation(currentBoatPos - boatCamPos);
+        yield return StartCoroutine(LerpCamera(mainCam, boatCamPos, boatCamRot, 1.5f));
+        yield return StartCoroutine(RestoreGroupRoutine(boatGroup, 2.0f));
+        yield return new WaitForSeconds(0.4f);
+
+        // --- STEP B: Zoom to redboat ---
+        UIManager.Instance?.ShowDialogue("Sắc đỏ kiêu hãnh xuôi dòng nước lớn...");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        // Calculate camera position dynamically relative to redboat's current position
+        Vector3 currentRedboatPos = redboatObj != null ? redboatObj.transform.position : new Vector3(-31.03f, 1.74f, 11.65f);
+        Vector3 redboatCamPos = currentRedboatPos + new Vector3(0f, 1.8f, -8.65f);
+        Quaternion redboatCamRot = Quaternion.LookRotation(currentRedboatPos - redboatCamPos);
+        yield return StartCoroutine(LerpCamera(mainCam, redboatCamPos, redboatCamRot, 1.5f));
+        yield return StartCoroutine(RestoreGroupRoutine(redboatGroup, 2.0f));
+        yield return new WaitForSeconds(0.4f);
+
+        // --- STEP C: Zoom to causaigon (Saigon Bridge) ---
+        UIManager.Instance?.ShowDialogue("Cầu Sài Gòn nối nhịp những dòng sông...");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        Vector3 causaigonCamPos = new Vector3(10f, 6f, 5f);
+        Quaternion causaigonCamRot = Quaternion.LookRotation(new Vector3(27.5f, 9.6f, 21.3f) - causaigonCamPos);
+        yield return StartCoroutine(LerpCamera(mainCam, causaigonCamPos, causaigonCamRot, 1.5f));
+        yield return StartCoroutine(RestoreGroupRoutine(causaigonGroup, 2.0f));
+        yield return new WaitForSeconds(0.4f);
+
+        // --- STEP D: Zoom to villa ---
+        UIManager.Instance?.ShowDialogue("Những khu biệt thự cổ rạng rỡ bên sông...");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        Vector3 villaCamPos = new Vector3(-10f, 12f, 15f);
+        Quaternion villaCamRot = Quaternion.LookRotation(new Vector3(-10f, 1.8f, 48f) - villaCamPos);
+        yield return StartCoroutine(LerpCamera(mainCam, villaCamPos, villaCamRot, 1.5f));
+        yield return StartCoroutine(RestoreGroupRoutine(villaGroup, 2.0f));
+        yield return new WaitForSeconds(0.4f);
+
+        // --- STEP E: Zoom to landmark (and restore the rest of the map!) ---
+        UIManager.Instance?.ShowDialogue("Và Landmark 81 vút cao đón ánh nắng vàng...");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        Vector3 landmarkCamPos = new Vector3(0f, 6f, 5f);
+        Quaternion landmarkCamRot = Quaternion.LookRotation(new Vector3(0f, 25f, 34f) - landmarkCamPos);
+        yield return StartCoroutine(LerpCamera(mainCam, landmarkCamPos, landmarkCamRot, 2.0f));
+
+        // Play reveal SFX once camera has arrived at Landmark
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_LandmarkReveal", 1.0f);
+
+        // Restore lighting and activate landmark emission
+        RestoreLights();
+        LightUpLandmark(); // Triggers tower emission and lighting intensities
+
+        // Restore landmark and everything else in parallel
+        Coroutine landmarkRestore = StartCoroutine(RestoreGroupRoutine(landmarkGroup, 3.0f));
+        Coroutine otherRestore = StartCoroutine(RestoreGroupRoutine(otherGroup, 3.0f));
+
+        yield return landmarkRestore;
+        yield return otherRestore;
+        yield return new WaitForSeconds(2.0f); // Delay for 2 seconds to admire the landmark before zooming out
+
+        // --- STEP F: Zoom out back to Player ---
+        UIManager.Instance?.ShowDialogue("Cả thành phố bừng sáng rực rỡ sắc màu.");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        yield return StartCoroutine(LerpCamera(mainCam, startCamPos, startCamRot, 2.0f));
+
+        // Re-enable Player movement and Camera tracking
+        if (playerController != null) playerController.enabled = true;
+        if (playerCamera != null) playerCamera.enabled = true;
+
+        // Fade in the restored city ambient sound
+        AudioManager.EnsureInstance()?.FadeToAmbience("AMB_Ending_Restored", 2.0f);
+
+        // Resume boat movement
+        foreach (var bm in boatMovements)
+        {
+            bm.isMoving = true;
+        }
+
+        yield return new WaitForSeconds(1.0f);
         UIManager.Instance?.ShowDialogue("Khi ký ức được lắng nghe, thành phố lại tìm thấy màu sắc của mình.");
         yield return new WaitForSeconds(3.2f);
         UIManager.Instance?.ShowDialogue("Tương lai không bắt đầu bằng việc quên đi quá khứ.\nTương lai bắt đầu khi ta biết mang ký ức đi cùng.");
         yield return new WaitForSeconds(3.4f);
-        UIManager.Instance?.ShowDialogue("BẠN ĐÃ TÌM LẠI KÝ ỨC ĐÔ THỊ\nTHÀNH PHỐ ĐÃ SỐNG LẠI");
         UIManager.Instance?.SetObjective("Tiến đến cổng sáng để quay lại xe buýt ký ức.");
 
         if (returnTrigger != null)
         {
             returnTrigger.SetActive(true);
+        }
+    }
+
+    private void CacheAndDimLights()
+    {
+        // Find sunset directional light
+        sunLight = GameObject.Find("REPLACE_Ending_SunsetDirectionalLight")?.GetComponent<Light>();
+        if (sunLight == null)
+        {
+            foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (l.type == LightType.Directional)
+                {
+                    sunLight = l;
+                    break;
+                }
+            }
+        }
+
+        if (sunLight != null)
+        {
+            originalSunIntensity = sunLight.intensity;
+            sunLight.intensity = originalSunIntensity * 0.18f; // Dim the sun to 18% (u ám look)
+        }
+
+        // Cache and turn off sunset disc glow lights
+        sunsetDiscLights.Clear();
+        originalSunsetDiscIntensities.Clear();
+        if (finalLightObject != null)
+        {
+            foreach (var l in finalLightObject.GetComponentsInChildren<Light>(true))
+            {
+                sunsetDiscLights.Add(l);
+                originalSunsetDiscIntensities.Add(l.intensity);
+                l.intensity = 0f; // Turn off sunset glow lights initially
+            }
+        }
+    }
+
+    private void RestoreLights()
+    {
+        if (sunLight != null)
+        {
+            sunLight.intensity = originalSunIntensity;
+        }
+
+        // Final light intensities will be handled or restored
+        if (finalLightObject != null)
+        {
+            for (int i = 0; i < sunsetDiscLights.Count; i++)
+            {
+                if (sunsetDiscLights[i] != null)
+                {
+                    sunsetDiscLights[i].intensity = 2.2f; // Matches LightUpLandmark specification
+                }
+            }
+        }
+    }
+
+    private IEnumerator LerpCamera(Camera cam, Vector3 targetPos, Quaternion targetRot, float duration)
+    {
+        Vector3 startPos = cam.transform.position;
+        Quaternion startRot = cam.transform.rotation;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            cam.transform.position = Vector3.Lerp(startPos, targetPos, t);
+            cam.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
+            yield return null;
+        }
+        cam.transform.position = targetPos;
+        cam.transform.rotation = targetRot;
+    }
+
+    private IEnumerator RestoreGroupRoutine(List<RendererMemory> group, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            foreach (var mem in group)
+            {
+                mem.LerpToRestored(t, grayTone);
+            }
+            yield return null;
+        }
+        foreach (var mem in group)
+        {
+            mem.ApplyRestored();
+        }
+    }
+
+    private void ApplyGrayMemoryInstant()
+    {
+        foreach (var mem in cachedRenderers)
+        {
+            mem.ApplyFaded(grayTone);
+        }
+    }
+
+    private void CategorizeGroups()
+    {
+        boatGroup.Clear();
+        redboatGroup.Clear();
+        causaigonGroup.Clear();
+        villaGroup.Clear();
+        landmarkGroup.Clear();
+        otherGroup.Clear();
+
+        foreach (var mem in cachedRenderers)
+        {
+            if (!mem.IsValid) continue;
+
+            string nameLower = mem.renderer.gameObject.name.ToLower();
+            string pathLower = mem.path.ToLower();
+
+            if (nameLower.Contains("redboat") || pathLower.Contains("redboat"))
+            {
+                redboatGroup.Add(mem);
+            }
+            else if (nameLower.Contains("boat") || pathLower.Contains("boat"))
+            {
+                boatGroup.Add(mem);
+            }
+            else if (nameLower.Contains("causaigon") || nameLower.Contains("bridge") || pathLower.Contains("causaigon"))
+            {
+                causaigonGroup.Add(mem);
+            }
+            else if (nameLower.Contains("villa") || pathLower.Contains("villa"))
+            {
+                villaGroup.Add(mem);
+            }
+            else if (nameLower.Contains("landmark") || pathLower.Contains("landmark") || nameLower.Contains("tower") || nameLower.Contains("spire"))
+            {
+                landmarkGroup.Add(mem);
+            }
+            else
+            {
+                otherGroup.Add(mem);
+            }
         }
     }
 
@@ -147,105 +461,182 @@ public class EndingSceneController : MonoBehaviour
         }
     }
 
-    private IEnumerator ShiftToneToOriginal()
+    private static string GetPath(Transform target)
     {
-        float elapsed = 0f;
-        while (elapsed < toneShiftDuration)
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
         {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / toneShiftDuration);
-            ApplyToneLerp(t);
-            yield return null;
+            path = current.name + "/" + path;
+            current = current.parent;
         }
-
-        ApplyToneLerp(1f);
+        return path;
     }
 
-    private void CacheOriginalColors()
+    // Helper classes for desaturation and group restoration
+    private class RendererMemory
     {
-        if (originalColors != null && colorPropNames != null)
-        {
-            return;
-        }
+        public readonly Renderer renderer;
+        public readonly string path;
+        private readonly MaterialMemory[] materials;
 
-        if (renderersToWarm == null)
-        {
-            return;
-        }
+        public bool IsValid => renderer != null;
+        public bool HasAnyMaterial => materials.Length > 0;
 
-        originalColors = new Color[renderersToWarm.Length];
-        colorPropNames = new string[renderersToWarm.Length];
-
-        for (int i = 0; i < renderersToWarm.Length; i++)
+        public RendererMemory(Renderer renderer)
         {
-            Renderer r = renderersToWarm[i];
-            if (r == null)
+            this.renderer = renderer;
+            path = GetPath(renderer.transform);
+
+            Material[] runtimeMaterials = renderer.materials;
+            List<MaterialMemory> materialMemories = new List<MaterialMemory>();
+            foreach (Material material in runtimeMaterials)
             {
-                continue;
+                if (material == null || !MaterialMemory.HasColorProperty(material))
+                {
+                    continue;
+                }
+
+                materialMemories.Add(new MaterialMemory(material));
             }
+            materials = materialMemories.ToArray();
+        }
 
-            Material material = r.material;
-            if (material != null)
+        public void ApplyFaded(Color grayTone)
+        {
+            foreach (MaterialMemory mat in materials)
             {
-                string propName = null;
-                if (material.HasProperty("_BaseColor"))
-                {
-                    propName = "_BaseColor";
-                }
-                else if (material.HasProperty("_Color"))
-                {
-                    propName = "_Color";
-                }
-                colorPropNames[i] = propName;
+                mat.ApplyFaded(grayTone);
+            }
+        }
 
-                if (propName != null)
-                {
-                    originalColors[i] = material.GetColor(propName);
-                }
-                else
-                {
-                    originalColors[i] = Color.white;
-                }
+        public void ApplyRestored()
+        {
+            foreach (MaterialMemory mat in materials)
+            {
+                mat.ApplyRestored();
+            }
+        }
+
+        public void LerpToRestored(float t, Color grayTone)
+        {
+            foreach (MaterialMemory mat in materials)
+            {
+                mat.LerpToRestored(t, grayTone);
+            }
+        }
+    }
+
+    private class MaterialMemory
+    {
+        private readonly Material material;
+        private readonly Color originalColor;
+        private readonly Color originalEmission;
+        private readonly bool hadEmission;
+        private readonly int colorPropId;
+        private readonly int emissionPropId;
+
+        public MaterialMemory(Material material)
+        {
+            this.material = material;
+            
+            if (material.HasProperty("_BaseColor"))
+            {
+                colorPropId = Shader.PropertyToID("_BaseColor");
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                colorPropId = Shader.PropertyToID("_Color");
+            }
+            else if (material.HasProperty("baseColorFactor"))
+            {
+                colorPropId = Shader.PropertyToID("baseColorFactor");
             }
             else
             {
-                originalColors[i] = Color.white;
+                colorPropId = -1;
             }
-        }
-    }
 
-    private void ApplyToneLerp(float t)
-    {
-        CacheOriginalColors();
+            originalColor = colorPropId != -1 ? material.GetColor(colorPropId) : Color.white;
 
-        if (renderersToWarm == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < renderersToWarm.Length; i++)
-        {
-            Renderer r = renderersToWarm[i];
-            string propName = colorPropNames != null && i < colorPropNames.Length ? colorPropNames[i] : null;
-
-            if (r == null || propName == null)
+            if (material.HasProperty("emissiveFactor"))
             {
-                continue;
+                emissionPropId = Shader.PropertyToID("emissiveFactor");
+                hadEmission = true;
+            }
+            else if (material.HasProperty("_EmissionColor"))
+            {
+                emissionPropId = Shader.PropertyToID("_EmissionColor");
+                hadEmission = true;
+            }
+            else
+            {
+                emissionPropId = -1;
+                hadEmission = false;
             }
 
-            Color originalColor = originalColors != null && i < originalColors.Length ? originalColors[i] : Color.white;
+            originalEmission = hadEmission ? material.GetColor(emissionPropId) : Color.black;
+        }
 
-            // Calculate monochrome desaturated tone of the original color
-            float luminance = originalColor.r * 0.299f + originalColor.g * 0.587f + originalColor.b * 0.114f;
-            Color desaturated = new Color(luminance, luminance, luminance, originalColor.a);
+        public void ApplyFaded(Color grayTone)
+        {
+            if (colorPropId != -1)
+            {
+                Color desaturated = GetDesaturatedColor(originalColor, grayTone);
+                material.SetColor(colorPropId, desaturated);
+            }
+            if (hadEmission)
+            {
+                material.SetColor(emissionPropId, Color.black);
+            }
+        }
 
-            // Blend desaturated color with grayTone (tint) for initial state (t=0)
-            Color grayVersion = Color.Lerp(desaturated, grayTone, 0.2f);
+        public void ApplyRestored()
+        {
+            if (colorPropId != -1)
+            {
+                material.SetColor(colorPropId, originalColor);
+            }
+            if (hadEmission)
+            {
+                material.SetColor(emissionPropId, originalEmission);
+            }
+        }
+
+        public void LerpToRestored(float t, Color grayTone)
+        {
+            if (colorPropId != -1)
+            {
+                Color fadedColor = GetDesaturatedColor(originalColor, grayTone);
+                Color targetColor = Color.Lerp(fadedColor, originalColor, t);
+                material.SetColor(colorPropId, targetColor);
+            }
             
-            // Lerp from the gray version to the original color based on t
-            Color targetColor = Color.Lerp(grayVersion, originalColor, t);
+            if (hadEmission)
+            {
+                material.SetColor(emissionPropId, Color.Lerp(Color.black, originalEmission, t));
+            }
+        }
+
+        private Color GetDesaturatedColor(Color original, Color grayTone)
+        {
+            float luminance = original.r * 0.299f + original.g * 0.587f + original.b * 0.114f;
+            Color gray = new Color(luminance, luminance, luminance, original.a);
             
-            r.material.SetColor(propName, targetColor);
+            // Make the color very dark (u ám) to correctly darken textured materials
+            float brightness = 0.22f;
+            Color faded = gray * brightness;
+            
+            // Blend strongly with the dark grey-blue tint (85%)
+            faded = Color.Lerp(faded, grayTone * brightness, 0.85f);
+            faded.a = original.a; // Keep original transparency
+            
+            return faded;
+        }
+
+        public static bool HasColorProperty(Material material)
+        {
+            return material.HasProperty("_BaseColor") || material.HasProperty("_Color") || material.HasProperty("baseColorFactor");
         }
     }
 }

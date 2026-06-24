@@ -6,6 +6,7 @@ public class BoatMovement : MonoBehaviour
     public float speed = 2.0f;
     public float minX = -52f; // Extend slightly past river boundaries
     public float maxX = 52f;
+    public bool isMoving = true;
 
     [Header("Bobbing & Rocking Settings")]
     public bool enableBobbing = true;
@@ -73,22 +74,30 @@ public class BoatMovement : MonoBehaviour
     private void Update()
     {
         // 1. Move boat along its local X-axis (forward direction)
-        // Since local Z-axis points into screen and local X-axis is aligned with the length of the boat:
-        // redboat: rotation Y=0, local right (X) points to world right (+X). Speed > 0 moves it right.
-        // boat: rotation Y=180, local right (X) points to world left (-X). Speed > 0 moves it left.
-        transform.Translate(Vector3.right * speed * Time.deltaTime, Space.Self);
+        if (isMoving)
+        {
+            transform.Translate(Vector3.right * speed * Time.deltaTime, Space.Self);
 
-        // 2. Wrap movement range along the world X axis
-        Vector3 currentPos = transform.position;
-        if (currentPos.x > maxX)
-        {
-            currentPos.x = minX;
-            transform.position = currentPos;
+            // 2. Wrap movement range along the world X axis
+            Vector3 currentPos = transform.position;
+            if (currentPos.x > maxX)
+            {
+                currentPos.x = minX;
+                transform.position = currentPos;
+            }
+            else if (currentPos.x < minX)
+            {
+                currentPos.x = maxX;
+                transform.position = currentPos;
+            }
+
+            if (sternWakeParticles != null && !sternWakeParticles.isPlaying) sternWakeParticles.Play();
+            if (bowWaveParticles != null && !bowWaveParticles.isPlaying) bowWaveParticles.Play();
         }
-        else if (currentPos.x < minX)
+        else
         {
-            currentPos.x = maxX;
-            transform.position = currentPos;
+            if (sternWakeParticles != null && sternWakeParticles.isPlaying) sternWakeParticles.Stop();
+            if (bowWaveParticles != null && bowWaveParticles.isPlaying) bowWaveParticles.Stop();
         }
 
         // 3. Apply gentle bobbing (Y offset)

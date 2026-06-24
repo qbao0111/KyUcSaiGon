@@ -43,3 +43,15 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: c211efbf2dbaf8c4489b07fe85e5edf9, type: 3}
   - name: AMB_Cathedral_Restored
     clip: {fileID: 8300000, guid: 95f22c36a2cdc1d42a3ac1ac04e9e91d, type: 3}
+  - name: AMB_Ending_LostMemory
+    clip: {fileID: 8300000, guid: cc5549ccdc07f3b44888d72cab71f2e7, type: 3}
+  - name: AMB_Ending_Restored
+    clip: {fileID: 8300000, guid: 541f4f66bc61ccc4eb4e4d12e2137b76, type: 3}
+  - name: SFX_CameraFocus
+    clip: {fileID: 8300000, guid: 90c9ea993a32b6648a08094aeca215aa, type: 3}
+  - name: SFX_LandmarkReveal
+    clip: {fileID: 8300000, guid: bcfbe005847693d4eb3566885d32efbd, type: 3}
+  - name: SFX_MemoryAwakening
+    clip: {fileID: 8300000, guid: 5ac5b6212ee4d41489319d6dbfb12307, type: 3}
+  - name: SFX_RestorationCinematicWave
+    clip: {fileID: 8300000, guid: 886b8fb3a15b3fd4da2faf003db106d7, type: 3}

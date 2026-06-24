@@ -14,37 +14,16 @@ public static class EndingSceneVisualPolisher
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         GameObject root = FindOrCreate("SceneBlockoutRoot");
-        Transform environment = FindOrCreateChild(root.transform, "EnvironmentRoot");
-        Transform landmark = FindOrCreateChild(root.transform, "LandmarkRoot");
         Transform props = FindOrCreateChild(root.transform, "RiversidePropRoot");
-        Transform effects = FindOrCreateChild(root.transform, "EffectsRoot");
         Transform returnRoot = FindOrCreateChild(root.transform, "ReturnTriggerRoot");
 
-        ClearChildren(environment);
-        if (landmark.childCount == 0)
-        {
-            ClearChildren(landmark);
-        }
-        ClearChildren(props);
-        ClearChildren(effects);
+        // We DO NOT clear environment, props, landmark, or effects.
+        // We preserve all models and only build the interaction point.
 
-        Material tile = Mat("M_Ending_WarmStoneTiles", new Color(0.55f, 0.56f, 0.58f));
-        Material river = Mat("M_Ending_SunsetRiver", new Color(0.07f, 0.34f, 0.52f));
         Material gold = Mat("M_Ending_SunsetGold", new Color(0.85f, 0.85f, 0.85f), true, 1.0f);
-        Material dark = Mat("M_Ending_DarkMetal", new Color(0.1f, 0.09f, 0.08f));
-        Material skyline = Mat("M_Ending_SkylineSilhouette", new Color(0.18f, 0.17f, 0.21f));
-        Material towerMat = Mat("M_Ending_Landmark81_WarmGlass", new Color(0.52f, 0.58f, 0.68f), true, 0.45f);
-        Material bannerMat = Mat("M_Ending_BannerRed", new Color(0.55f, 0.08f, 0.05f));
-        Material waterGlow = Mat("M_Ending_WaterReflectionGlow", new Color(0.8f, 0.9f, 1f), true, 1.0f);
-        Material waterDark = Mat("M_Ending_WaterSoftWave", new Color(0.04f, 0.22f, 0.34f), true, 0.35f);
-
-        BuildRiverside(environment, tile, river, waterGlow, waterDark);
-        BuildSkyline(environment, landmark, skyline, towerMat, gold);
-        BuildRailing(props, dark);
-        BuildStreetDetails(props, dark, gold, bannerMat, tile);
-        BuildBoat(props, dark, gold);
-        BuildReturnTrigger(returnRoot, gold);
-        PolishLighting(effects, gold);
+        
+        BuildInteractionPoint(props, gold);
+        SetupReturnTrigger(returnRoot);
         FixPlayerSpawn();
         HideMemoryShardPlaceholders(root);
         UpdateEndingController(root);
@@ -54,7 +33,7 @@ public static class EndingSceneVisualPolisher
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("[KyUcSaiGon] Scene_07_Ending polished into riverside sunset viewpoint.");
+        Debug.Log("[KyUcSaiGon] Scene_07_Ending polished: preserved all models and set up interaction point.");
     }
 
     private static void BuildRiverside(Transform parent, Material tile, Material river, Material waterGlow, Material waterDark)
@@ -176,7 +155,92 @@ public static class EndingSceneVisualPolisher
         movement.maxX = 52f;
     }
 
-    private static void BuildReturnTrigger(Transform returnRoot, Material gold)
+    private static void BuildInteractionPoint(Transform props, Material gold)
+    {
+        Transform point = FindOrCreateChild(props, "REPLACE_Ending_CutsceneTriggerPoint");
+        point.position = new Vector3(0.11f, 1.6f, -1.6f); // Positioned exactly at Railing (5)
+        point.localScale = new Vector3(1.0f, 1.0f, 1.0f); // Use standard scale
+
+        // Remove primitive collider if any, and add a sphere collider with isTrigger = true
+        Collider col = point.GetComponent<Collider>();
+        if (col != null)
+        {
+            Object.DestroyImmediate(col);
+        }
+
+        SphereCollider sphereCol = point.gameObject.GetComponent<SphereCollider>();
+        if (sphereCol == null)
+        {
+            sphereCol = point.gameObject.AddComponent<SphereCollider>();
+        }
+        sphereCol.isTrigger = true;
+        sphereCol.radius = 2.0f; // Large trigger area for easy interaction
+
+        // Visual mesh: A soft vertical cylinder (light shaft)
+        Transform visualT = point.Find("Visual");
+        GameObject visual = visualT != null ? visualT.gameObject : null;
+        if (visual != null)
+        {
+            Object.DestroyImmediate(visual);
+        }
+
+        visual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        visual.name = "Visual";
+        visual.transform.SetParent(point);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+        visual.transform.localScale = new Vector3(0.28f, 1.2f, 0.28f); // Tall and thin light shaft
+
+        // Destroy visual collider to prevent blocking raycasts
+        Collider visCol = visual.GetComponent<Collider>();
+        if (visCol != null)
+        {
+            Object.DestroyImmediate(visCol);
+        }
+
+        // Configure transparent additive material
+        Material beamMat = Mat("M_Ending_GoldBeam", new Color(0.96f, 0.83f, 0.36f, 0.14f), true, 2.0f);
+        beamMat.SetFloat("_Surface", 1f); // Transparent
+        beamMat.SetFloat("_Blend", 1f); // Additive
+        beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        beamMat.SetInt("_ZWrite", 0);
+        beamMat.DisableKeyword("_ALPHATEST_ON");
+        beamMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        beamMat.renderQueue = 3000;
+        EditorUtility.SetDirty(beamMat);
+
+        Renderer r = visual.GetComponent<Renderer>();
+        if (r != null)
+        {
+            r.sharedMaterial = beamMat;
+        }
+
+        // Attach EndingTriggerInteractable
+        if (point.gameObject.GetComponent<EndingTriggerInteractable>() == null)
+        {
+            point.gameObject.AddComponent<EndingTriggerInteractable>();
+        }
+
+        // Attach GlowingInteractionPoint
+        if (point.gameObject.GetComponent<GlowingInteractionPoint>() == null)
+        {
+            point.gameObject.AddComponent<GlowingInteractionPoint>();
+        }
+
+        // Add a small point light to make it glow in the dark scene
+        Light light = point.gameObject.GetComponent<Light>();
+        if (light == null)
+        {
+            light = point.gameObject.AddComponent<Light>();
+        }
+        light.type = LightType.Point;
+        light.color = new Color(0.96f, 0.83f, 0.36f);
+        light.intensity = 1.5f;
+        light.range = 5f;
+    }
+
+    private static void SetupReturnTrigger(Transform returnRoot)
     {
         Transform trigger = returnRoot.Find("REPLACE_Ending_ReturnToHubTrigger");
         if (trigger == null)
@@ -186,25 +250,44 @@ public static class EndingSceneVisualPolisher
             trigger = go.transform;
             BoxCollider col = go.AddComponent<BoxCollider>();
             col.isTrigger = false;
-            BusStopInteractable interact = go.AddComponent<BusStopInteractable>();
-            interact.requireCurrentZoneRestored = false;
-            interact.targetScene = SceneLoader.BusHub;
-            interact.interactionPrompt = "Nhấn E để quay về xe buýt ký ức.";
         }
 
         trigger.gameObject.SetActive(false);
-        trigger.position = new Vector3(0, 1.25f, -18f);
-        BoxCollider box = trigger.GetComponent<BoxCollider>() ?? trigger.gameObject.AddComponent<BoxCollider>();
+        trigger.position = new Vector3(0f, 1.25f, -18f);
+        BoxCollider box = trigger.GetComponent<BoxCollider>();
+        if (box == null)
+        {
+            box = trigger.gameObject.AddComponent<BoxCollider>();
+        }
         box.size = new Vector3(4f, 2.5f, 2f);
         box.center = Vector3.zero;
-        Cube("Visual_REPLACE_Ending_ReturnToHubTrigger", trigger, Vector3.zero, new Vector3(4f, 2.5f, 0.35f), gold);
+
+        BusStopInteractable interact = trigger.GetComponent<BusStopInteractable>();
+        if (interact == null)
+        {
+            interact = trigger.gameObject.AddComponent<BusStopInteractable>();
+        }
+        interact.requireCurrentZoneRestored = false;
+        interact.targetScene = SceneLoader.BusHub;
+        interact.interactionPrompt = "Nhấn E để quay về xe buýt ký ức.";
     }
 
     private static void PolishLighting(Transform effects, Material gold)
     {
+        List<GameObject> lightsToDestroy = new List<GameObject>();
         foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
         {
-            Object.DestroyImmediate(light.gameObject);
+            if (light.gameObject.name.Contains("CutsceneTriggerPoint") || 
+                light.gameObject.name.Contains("Player") ||
+                light.gameObject.name.Contains("Character"))
+            {
+                continue;
+            }
+            lightsToDestroy.Add(light.gameObject);
+        }
+        foreach (var go in lightsToDestroy)
+        {
+            if (go != null) Object.DestroyImmediate(go);
         }
 
         GameObject sun = new GameObject("REPLACE_Ending_SunsetDirectionalLight");
@@ -268,7 +351,11 @@ public static class EndingSceneVisualPolisher
 
     private static void UpdateEndingController(GameObject root)
     {
-        EndingSceneController controller = root.GetComponent<EndingSceneController>() ?? root.AddComponent<EndingSceneController>();
+        EndingSceneController controller = root.GetComponent<EndingSceneController>();
+        if (controller == null)
+        {
+            controller = root.AddComponent<EndingSceneController>();
+        }
         controller.landmarkTower = GameObject.Find("REPLACE_Ending_Landmark81_Tower");
         controller.memoryShards = new GameObject[0];
         controller.memoryNames = new string[0];

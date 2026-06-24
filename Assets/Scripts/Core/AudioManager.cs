@@ -178,6 +178,10 @@ public class AudioManager : MonoBehaviour
         {
             FadeToAmbience("AMB_Cathedral_Gloomy", DefaultAmbienceFadeSeconds);
         }
+        else if (sceneName == SceneLoader.Ending)
+        {
+            FadeToAmbience("AMB_Ending_LostMemory", DefaultAmbienceFadeSeconds);
+        }
         else
         {
             StopAmbience();
@@ -303,7 +307,13 @@ public class AudioManager : MonoBehaviour
             "AMB_NguyenHue_Gloomy",
             "AMB_NguyenHue_Restored",
             "AMB_Cathedral_Gloomy",
-            "AMB_Cathedral_Restored"
+            "AMB_Cathedral_Restored",
+            "AMB_Ending_LostMemory",
+            "AMB_Ending_Restored",
+            "SFX_CameraFocus",
+            "SFX_LandmarkReveal",
+            "SFX_MemoryAwakening",
+            "SFX_RestorationCinematicWave"
         };
 
         foreach (string clipName in knownClips)
@@ -356,35 +366,6 @@ public class AudioManager : MonoBehaviour
     }
 }
 
-[System.Serializable]
-public class AudioClipLibraryEntry
-{
-    public string name;
-    public AudioClip clip;
-}
-
-public class AudioClipLibrary : ScriptableObject
-{
-    public AudioClipLibraryEntry[] clips;
-
-    public AudioClip GetClip(string clipName)
-    {
-        if (clips == null)
-        {
-            return null;
-        }
-
-        foreach (AudioClipLibraryEntry entry in clips)
-        {
-            if (entry != null && entry.name == clipName)
-            {
-                return entry.clip;
-            }
-        }
-
-        return null;
-    }
-}
 
 #if UNITY_EDITOR
 public static class AudioLibraryAssetBuilder
@@ -423,7 +404,13 @@ public static class AudioLibraryAssetBuilder
             "AMB_NguyenHue_Gloomy",
             "AMB_NguyenHue_Restored",
             "AMB_Cathedral_Gloomy",
-            "AMB_Cathedral_Restored"
+            "AMB_Cathedral_Restored",
+            "AMB_Ending_LostMemory",
+            "AMB_Ending_Restored",
+            "SFX_CameraFocus",
+            "SFX_LandmarkReveal",
+            "SFX_MemoryAwakening",
+            "SFX_RestorationCinematicWave"
         };
 
         List<AudioClipLibraryEntry> entries = new List<AudioClipLibraryEntry>();
