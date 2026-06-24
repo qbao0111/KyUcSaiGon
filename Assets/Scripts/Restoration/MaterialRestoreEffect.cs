@@ -12,6 +12,7 @@ public class MaterialRestoreEffect : RestorableEffect
 
     private Material[] cachedMaterials;
     private Color[] originalColors;
+    private string[] colorPropertyNames;
 
     private void Reset()
     {
@@ -47,13 +48,14 @@ public class MaterialRestoreEffect : RestorableEffect
 
     private void CacheOriginalColors()
     {
-        if (cachedMaterials != null && originalColors != null)
+        if (cachedMaterials != null && originalColors != null && colorPropertyNames != null)
         {
             return;
         }
 
         cachedMaterials = new Material[renderers.Length];
         originalColors = new Color[renderers.Length];
+        colorPropertyNames = new string[renderers.Length];
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -65,12 +67,40 @@ public class MaterialRestoreEffect : RestorableEffect
 
             Material material = itemRenderer.material;
             cachedMaterials[i] = material;
-            originalColors[i] = material != null && material.HasProperty("_Color") ? material.color : Color.white;
+            
+            if (material != null)
+            {
+                string propName = null;
+                if (material.HasProperty("_BaseColor"))
+                {
+                    propName = "_BaseColor";
+                }
+                else if (material.HasProperty("_Color"))
+                {
+                    propName = "_Color";
+                }
+                colorPropertyNames[i] = propName;
+
+                if (propName != null)
+                {
+                    originalColors[i] = material.GetColor(propName);
+                }
+                else
+                {
+                    originalColors[i] = Color.white;
+                }
+            }
+            else
+            {
+                originalColors[i] = Color.white;
+            }
         }
     }
 
     private void ApplyState(bool restored, float amount)
     {
+        CacheOriginalColors();
+
         if (!preserveRendererColors)
         {
             ApplyColor(restored ? restoredColor : grayColor);
@@ -80,26 +110,39 @@ public class MaterialRestoreEffect : RestorableEffect
         for (int i = 0; i < renderers.Length; i++)
         {
             Material material = cachedMaterials != null && i < cachedMaterials.Length ? cachedMaterials[i] : null;
-            if (material == null || !material.HasProperty("_Color"))
+            string propName = colorPropertyNames != null && i < colorPropertyNames.Length ? colorPropertyNames[i] : null;
+
+            if (material == null || propName == null)
             {
                 continue;
             }
 
             Color originalColor = originalColors != null && i < originalColors.Length ? originalColors[i] : restoredColor;
-            Color grayTone = Color.Lerp(originalColor, grayColor, grayBlend);
+            
+            // Calculate a true monochrome desaturated tone
+            float luminance = originalColor.r * 0.299f + originalColor.g * 0.587f + originalColor.b * 0.114f;
+            Color desaturated = new Color(luminance, luminance, luminance, originalColor.a);
+            
+            // Blend desaturated color with grayColor (tint) and original color (based on grayBlend)
+            Color targetGray = Color.Lerp(desaturated, grayColor, 0.20f); // 20% tint, 80% desaturated monochrome
+            Color grayTone = Color.Lerp(originalColor, targetGray, grayBlend);
+            
             Color targetColor = restored ? originalColor : grayTone;
-            material.color = restored ? Color.Lerp(grayTone, targetColor, amount) : targetColor;
+            material.SetColor(propName, restored ? Color.Lerp(grayTone, targetColor, amount) : targetColor);
         }
     }
 
     private void ApplyColor(Color color)
     {
         CacheOriginalColors();
-        foreach (Renderer itemRenderer in renderers)
+        for (int i = 0; i < renderers.Length; i++)
         {
-            if (itemRenderer != null)
+            Material material = cachedMaterials != null && i < cachedMaterials.Length ? cachedMaterials[i] : null;
+            string propName = colorPropertyNames != null && i < colorPropertyNames.Length ? colorPropertyNames[i] : null;
+
+            if (material != null && propName != null)
             {
-                itemRenderer.material.color = color;
+                material.SetColor(propName, color);
             }
         }
     }

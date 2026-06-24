@@ -60,12 +60,12 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         bool restored = memoryZone != null && memoryZone.IsRestored;
         if (smallBellItem != null)
         {
-            smallBellItem.gameObject.SetActive(!restored);
+            smallBellItem.gameObject.SetActive(false);
         }
 
         if (bellPuzzle != null)
         {
-            bellPuzzle.gameObject.SetActive(restored);
+            bellPuzzle.gameObject.SetActive(false);
         }
 
         if (returnBusStop != null)
@@ -87,6 +87,11 @@ public class NhaThoDucBaSceneController : MonoBehaviour
     public void OnSmallBellCollected()
     {
         bellCollected = true;
+        if (smallBellItem != null)
+        {
+            smallBellItem.gameObject.SetActive(false);
+        }
+
         UIManager.Instance?.SetObjective(objectiveReturnBell);
     }
 
@@ -104,6 +109,11 @@ public class NhaThoDucBaSceneController : MonoBehaviour
             firstTalkDone = true;
             UIManager.Instance?.ShowDialogue(firstNpcDialogue);
             UIManager.Instance?.SetObjective(objectiveFindBell);
+            if (smallBellItem != null)
+            {
+                smallBellItem.gameObject.SetActive(true);
+            }
+
             return;
         }
 
@@ -135,6 +145,11 @@ public class NhaThoDucBaSceneController : MonoBehaviour
     {
         UIManager.Instance?.ShowDialogue(restoredDialogue);
         UIManager.Instance?.SetObjective(objectiveReturnBus);
+        if (bellPuzzle != null)
+        {
+            bellPuzzle.gameObject.SetActive(false);
+        }
+
         if (returnBusStop != null)
         {
             returnBusStop.gameObject.SetActive(true);

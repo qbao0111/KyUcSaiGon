@@ -100,6 +100,9 @@ public static class KyUcSaiGonTeamSetupMenu
             EnsureBuildSettings();
             report.Add("Build Settings scenes verified.");
 
+            SpeakerMixerPuzzlePrefabBuilder.EnsurePrefabExists();
+            report.Add("Speaker mixer puzzle UI prefab verified.");
+
             ReimportFocusedAssets();
             report.Add("Focused art/model assets reimported.");
 

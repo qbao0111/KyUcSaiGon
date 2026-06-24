@@ -1,10 +1,12 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class BusHubRouteBoardController : MonoBehaviour
 {
     private const string WorldBoardRootName = "BusHubWorldBoardRoot";
+    private const string PanoramaResourcePath = "BusHub/ho-chi-minh-city";
     private bool endingStarted;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -76,8 +78,8 @@ public class BusHubRouteBoardController : MonoBehaviour
     {
         RemoveOldWorldRouteVisuals();
         RemoveStaleBoardTexts();
-        CreateBlankPanoramaBoard();
-        PrototypeLogger.Info("BusHub physical board is now a blank HCM panorama placeholder. Press E opens the paper map UI.");
+        CreatePanoramaBoard();
+        PrototypeLogger.Info("BusHub physical board now uses HCM panorama image. Press E opens the paper map UI.");
     }
 
     private void RemoveOldWorldRouteVisuals()
@@ -104,6 +106,15 @@ public class BusHubRouteBoardController : MonoBehaviour
                 Destroy(textMesh.gameObject);
             }
         }
+
+        TMP_Text[] tmpTexts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text tmpText in tmpTexts)
+        {
+            if (IsRedundantBoardText(tmpText.text))
+            {
+                Destroy(tmpText.gameObject);
+            }
+        }
     }
 
     private bool IsRedundantBoardText(string text)
@@ -119,7 +130,7 @@ public class BusHubRouteBoardController : MonoBehaviour
             || text.Contains("Nhan E de mo");
     }
 
-    private void CreateBlankPanoramaBoard()
+    private void CreatePanoramaBoard()
     {
         GameObject boardRoot = new GameObject(WorldBoardRootName);
         boardRoot.transform.SetParent(transform);
@@ -127,7 +138,15 @@ public class BusHubRouteBoardController : MonoBehaviour
         boardRoot.transform.localRotation = Quaternion.identity;
         boardRoot.transform.localScale = Vector3.one;
 
-        CreateCube(boardRoot.transform, "BlankPanoramaPanel", new Vector3(0.5f, 2.95f, 14.2f), new Vector3(8.25f, 3.85f, 0.16f), new Color(0.035f, 0.04f, 0.045f));
+        Texture2D panoramaTexture = Resources.Load<Texture2D>(PanoramaResourcePath);
+        // Keep the physical board close to the 16:9 photo aspect ratio so the image
+        // stays readable instead of being stretched across the route board.
+        GameObject panoramaPanel = CreateCube(boardRoot.transform, "Visual_REPLACE_BusHub_HCMPanorama", new Vector3(0.5f, 2.95f, 14.2f), new Vector3(7.25f, 4.08f, 0.16f), new Color(0.035f, 0.04f, 0.045f));
+        if (panoramaTexture != null)
+        {
+            Renderer panelRenderer = panoramaPanel.GetComponent<Renderer>();
+            panelRenderer.material = CreatePanoramaMaterial(panoramaTexture);
+        }
 
         GameObject borderRoot = new GameObject("BoardGoldBorder");
         borderRoot.transform.SetParent(boardRoot.transform);
@@ -135,13 +154,24 @@ public class BusHubRouteBoardController : MonoBehaviour
         borderRoot.transform.localRotation = Quaternion.identity;
         borderRoot.transform.localScale = Vector3.one;
 
-        Color gold = new Color(1f, 0.58f, 0.12f);
-        CreateCube(borderRoot.transform, "Border_Top", new Vector3(0.5f, 4.94f, 14.02f), new Vector3(8.55f, 0.16f, 0.08f), gold, true);
-        CreateCube(borderRoot.transform, "Border_Bottom", new Vector3(0.5f, 0.99f, 14.02f), new Vector3(8.55f, 0.16f, 0.08f), gold, true);
-        CreateCube(borderRoot.transform, "Border_Left", new Vector3(-3.85f, 2.95f, 14.02f), new Vector3(0.16f, 4f, 0.08f), gold, true);
-        CreateCube(borderRoot.transform, "Border_Right", new Vector3(4.85f, 2.95f, 14.02f), new Vector3(0.16f, 4f, 0.08f), gold, true);
+        Color frameDark = new Color(0.055f, 0.045f, 0.035f);
+        Color bronze = new Color(0.72f, 0.42f, 0.16f);
 
-        CreateBoardText(boardRoot.transform, "PlaceholderText", "Ảnh toàn cảnh TP.HCM", new Vector3(0.5f, 2.95f, 13.98f), 0.14f, new Color(1f, 0.72f, 0.32f));
+        CreateCube(borderRoot.transform, "Frame_Top", new Vector3(0.5f, 5.08f, 14.02f), new Vector3(7.58f, 0.14f, 0.08f), frameDark);
+        CreateCube(borderRoot.transform, "Frame_Bottom", new Vector3(0.5f, 0.82f, 14.02f), new Vector3(7.58f, 0.14f, 0.08f), frameDark);
+        CreateCube(borderRoot.transform, "Frame_Left", new Vector3(-3.33f, 2.95f, 14.02f), new Vector3(0.14f, 4.4f, 0.08f), frameDark);
+        CreateCube(borderRoot.transform, "Frame_Right", new Vector3(4.33f, 2.95f, 14.02f), new Vector3(0.14f, 4.4f, 0.08f), frameDark);
+
+        CreateCube(borderRoot.transform, "BronzeLine_Top", new Vector3(0.5f, 5f, 13.98f), new Vector3(7.38f, 0.035f, 0.045f), bronze);
+        CreateCube(borderRoot.transform, "BronzeLine_Bottom", new Vector3(0.5f, 0.9f, 13.98f), new Vector3(7.38f, 0.035f, 0.045f), bronze);
+        CreateCube(borderRoot.transform, "BronzeLine_Left", new Vector3(-3.22f, 2.95f, 13.98f), new Vector3(0.035f, 4.14f, 0.045f), bronze);
+        CreateCube(borderRoot.transform, "BronzeLine_Right", new Vector3(4.22f, 2.95f, 13.98f), new Vector3(0.035f, 4.14f, 0.045f), bronze);
+
+        if (panoramaTexture == null)
+        {
+            CreateBoardText(boardRoot.transform, "PlaceholderText", "Ảnh toàn cảnh TP.HCM", new Vector3(0.5f, 2.95f, 13.98f), 0.14f, new Color(1f, 0.72f, 0.32f));
+            PrototypeLogger.Warning("BusHub panorama texture not found at Resources/" + PanoramaResourcePath + ".");
+        }
     }
 
     private GameObject CreateCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color, bool emissive = false)
@@ -179,6 +209,38 @@ public class BusHubRouteBoardController : MonoBehaviour
         return material;
     }
 
+    private Material CreatePanoramaMaterial(Texture2D texture)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Standard");
+        }
+
+        Material material = new Material(shader);
+        material.name = "Runtime_M_BusHub_HCMPanorama";
+        material.color = Color.white;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+        texture.anisoLevel = 8;
+        texture.mipMapBias = -0.75f;
+        material.mainTexture = texture;
+        material.mainTextureScale = new Vector2(-1f, -1f);
+        material.mainTextureOffset = new Vector2(1f, 1f);
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTexture("_BaseMap", texture);
+            material.SetTextureScale("_BaseMap", new Vector2(-1f, -1f));
+            material.SetTextureOffset("_BaseMap", new Vector2(1f, 1f));
+            material.SetColor("_BaseColor", Color.white);
+        }
+
+        material.EnableKeyword("_EMISSION");
+        material.SetColor("_EmissionColor", Color.white * 0.15f);
+        return material;
+    }
+
     private TextMesh CreateBoardText(Transform parent, string name, string text, Vector3 localPosition, float characterSize, Color color)
     {
         GameObject textObject = new GameObject(name);
@@ -212,7 +274,7 @@ public class BusHubRouteBoardController : MonoBehaviour
 
     private IEnumerator LoadEndingAfterDelay()
     {
-        UIManager.Instance?.ShowDialogue("6 mảnh ký ức đã hội tụ. Xe buýt sẽ khởi hành chuyến cuối.");
+        UIManager.Instance?.ShowDialogue("2 ký ức quan trọng đã hội tụ. Xe buýt sẽ khởi hành chuyến cuối.");
         yield return new WaitForSeconds(3f);
         SceneLoader.Load(SceneLoader.Ending);
     }

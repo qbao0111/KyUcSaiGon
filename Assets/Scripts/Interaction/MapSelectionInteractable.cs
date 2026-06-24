@@ -61,7 +61,7 @@ public class MapSelectionInteractable : MonoBehaviour, IInteractable
             }
             else
             {
-                UIManager.Instance?.ShowDialogue("Can du 6 manh ky uc de mo chuyen xe cuoi.");
+                UIManager.Instance?.ShowDialogue("Cần hoàn thành Nguyễn Huệ và Nhà thờ Đức Bà để mở chuyến xe cuối.");
             }
 
             return;
