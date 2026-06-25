@@ -32,6 +32,7 @@ public class UIManager : MonoBehaviour
     public Button submitPuzzleButton;
     public Button closePuzzleButton;
     public SpeakerMixerPuzzleUI speakerMixerPrefab;
+    public BellSequencePuzzleUI bellSequencePrefab;
 
     [Header("Cathedral Bell Puzzle Art (Scene 04 only)")]
     public Sprite cathedralPuzzleBackground;
@@ -1067,20 +1068,49 @@ public class UIManager : MonoBehaviour
             puzzlePanelRect.offsetMax = Vector2.zero;
         }
 
-        GameObject root = new GameObject("BellSequenceRuntimeUI", typeof(RectTransform), typeof(BellSequencePuzzleUI));
-        root.transform.SetParent(puzzlePanel.transform, false);
-        root.transform.SetAsLastSibling();
-        activeBellSequence = root.GetComponent<BellSequencePuzzleUI>();
-        activeBellSequence.Bind(
-            puzzle,
-            puzzleInput,
-            SubmitPuzzle,
-            HidePuzzle,
-            cathedralPuzzleBackground,
-            cathedralBellBackground,
-            cathedralBellIcon,
-            cathedralBellPull,
-            cathedralBellPullBackground);
+        BellSequencePuzzleUI prefab = bellSequencePrefab != null
+            ? bellSequencePrefab
+            : Resources.Load<BellSequencePuzzleUI>("UI/PF_BellSequencePuzzleUI");
+
+        if (prefab != null)
+        {
+            activeBellSequence = Instantiate(prefab, puzzlePanel.transform);
+            RectTransform activeRect = activeBellSequence.GetComponent<RectTransform>();
+            if (activeRect != null)
+            {
+                activeRect.anchorMin = Vector2.zero;
+                activeRect.anchorMax = Vector2.one;
+                activeRect.offsetMin = Vector2.zero;
+                activeRect.offsetMax = Vector2.zero;
+            }
+            activeBellSequence.Bind(
+                puzzle,
+                puzzleInput,
+                SubmitPuzzle,
+                HidePuzzle,
+                cathedralPuzzleBackground,
+                cathedralBellBackground,
+                cathedralBellIcon,
+                cathedralBellPull,
+                cathedralBellPullBackground);
+        }
+        else
+        {
+            GameObject root = new GameObject("BellSequenceRuntimeUI", typeof(RectTransform), typeof(BellSequencePuzzleUI));
+            root.transform.SetParent(puzzlePanel.transform, false);
+            root.transform.SetAsLastSibling();
+            activeBellSequence = root.GetComponent<BellSequencePuzzleUI>();
+            activeBellSequence.Bind(
+                puzzle,
+                puzzleInput,
+                SubmitPuzzle,
+                HidePuzzle,
+                cathedralPuzzleBackground,
+                cathedralBellBackground,
+                cathedralBellIcon,
+                cathedralBellPull,
+                cathedralBellPullBackground);
+        }
     }
 
     private void ClearBellSequencePanel()

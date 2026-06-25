@@ -143,7 +143,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
             return;
         }
 
-        UIManager.Instance?.ShowDialogue("Hãy sắp xếp thứ tự chuông: La, Sol, Re, Mi, Si, Do.");
+        UIManager.Instance?.ShowDialogue("Hãy sắp xếp thứ tự các nốt chuông dựa trên quy tắc hòa âm.");
         UIManager.Instance?.SetObjective(objectiveSolvePuzzle);
     }
 
