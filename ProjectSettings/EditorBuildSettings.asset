@@ -17,19 +17,19 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Scene_01_NguyenHue_Tutorial.unity
     guid: f5a3ea2e16f8e774d9c40aadbb327e08
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Scene_02_BenThanh.unity
     guid: 9d991af85b03c6c46b6fcd091a1ae0a5
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Scene_03_DinhDocLap.unity
     guid: 03ca9590a4633464fb7171dc8ef26352
   - enabled: 1
     path: Assets/Scenes/Scene_04_NhaThoDucBa.unity
     guid: 3530895bf36f11940bbc626b220f7b93
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Scene_05_Bitexco.unity
     guid: c21c43f1ea6dd42409608aa34b3c7058
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Scene_06_BachDang.unity
     guid: 177a6d8031cea13438ed0dbc4b822969
   - enabled: 1

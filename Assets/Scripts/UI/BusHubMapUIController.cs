@@ -519,17 +519,24 @@ public class BusHubMapUIController : MonoBehaviour
 
     private Sprite LoadSprite(string assetPath, string fallbackPath)
     {
-#if UNITY_EDITOR
-        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        string fileName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+        Sprite sprite = Resources.Load<Sprite>("UI/BusHub/" + fileName);
         if (sprite == null && !string.IsNullOrEmpty(fallbackPath))
         {
-            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(fallbackPath);
+            string fallbackFileName = System.IO.Path.GetFileNameWithoutExtension(fallbackPath);
+            sprite = Resources.Load<Sprite>("UI/BusHub/" + fallbackFileName);
         }
-
-        return sprite;
-#else
-        return null;
+#if UNITY_EDITOR
+        if (sprite == null)
+        {
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+            if (sprite == null && !string.IsNullOrEmpty(fallbackPath))
+            {
+                sprite = AssetDatabase.LoadAssetAtPath<Sprite>(fallbackPath);
+            }
+        }
 #endif
+        return sprite;
     }
 
     private bool PressedLeft()

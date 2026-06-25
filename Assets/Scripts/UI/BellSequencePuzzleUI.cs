@@ -9,19 +9,23 @@ public class BellSequencePuzzleUI : MonoBehaviour
     private static readonly string[] BellNames = { "Sol", "La", "Si", "Do", "Re", "Mi" };
 
     private readonly List<string> sequence = new List<string>(6);
-    private readonly Button[] ropeButtons = new Button[6];
-    private readonly Image[] ropeImages = new Image[6];
-    private readonly Image[] slotHighlights = new Image[6];
-    private readonly Text[] orderBadges = new Text[6];
-    private readonly Text[] sequenceSlotLabels = new Text[6];
-    private readonly Image[] sequenceSlotBells = new Image[6];
+
+    [Header("UI References (Assigned in Inspector or Built Dynamically)")]
+    public Button[] ropeButtons = new Button[6];
+    public Image[] ropeImages = new Image[6];
+    public Image[] slotHighlights = new Image[6];
+    public Text[] orderBadges = new Text[6];
+    public Text[] sequenceSlotLabels = new Text[6];
+    public Image[] sequenceSlotBells = new Image[6];
+    public Text feedbackText;
+    public Button submitButton;
+    public Button resetButton;
+    public Button closeButton;
 
     private PuzzleInteractable puzzle;
     private InputField answerInput;
     private Action submitAction;
     private Action closeAction;
-    private Text feedbackText;
-    private Button submitButton;
     private Font displayFont;
     private bool ownsDisplayFont;
     private Coroutine feedbackRoutine;
@@ -62,7 +66,39 @@ public class BellSequencePuzzleUI : MonoBehaviour
         bellPullBackground = pullBackgroundSprite;
         displayFont = ResolveFont();
 
-        BuildLayout();
+        if (ropeButtons == null || ropeButtons.Length == 0 || ropeButtons[0] == null)
+        {
+            BuildLayout();
+        }
+        else
+        {
+            // Bind buttons assigned via Inspector
+            for (int i = 0; i < ropeButtons.Length; i++)
+            {
+                if (ropeButtons[i] != null)
+                {
+                    int capturedIndex = i;
+                    ropeButtons[i].onClick.RemoveAllListeners();
+                    ropeButtons[i].onClick.AddListener(() => SelectBellByIndex(capturedIndex));
+                }
+            }
+            if (resetButton != null)
+            {
+                resetButton.onClick.RemoveAllListeners();
+                resetButton.onClick.AddListener(ResetSequence);
+            }
+            if (submitButton != null)
+            {
+                submitButton.onClick.RemoveAllListeners();
+                submitButton.onClick.AddListener(RequestSubmit);
+            }
+            if (closeButton != null)
+            {
+                closeButton.onClick.RemoveAllListeners();
+                closeButton.onClick.AddListener(() => closeAction?.Invoke());
+            }
+        }
+
         ResetSequence();
     }
 
@@ -163,16 +199,16 @@ public class BellSequencePuzzleUI : MonoBehaviour
         frameImage.preserveAspect = true;
         AddOutline(frame.gameObject, new Color(0.37f, 0.18f, 0.06f, 0.95f), new Vector2(5f, -5f));
 
-        CreateText("Title", frame, "HÒA ÂM THÁP CHUÔNG", 44, FontStyle.Bold, parchmentText, new Vector2(1040f, 62f), new Vector2(0f, 350f), TextAnchor.MiddleCenter, true);
+        CreateText("Title", frame, "HÒA ÂM THÁP CHUÔNG", 40, FontStyle.Bold, parchmentText, new Vector2(1200f, 75f), new Vector2(0f, 270f), TextAnchor.MiddleCenter, true);
 
-        Button closeButton = CreateButton("CloseButton", frame, "×", new Vector2(58f, 58f), new Vector2(720f, 325f), new Color(0.21f, 0.08f, 0.035f, 0.96f), paleGold, 38);
+        closeButton = CreateButton("CloseButton", frame, "×", new Vector2(45f, 45f), new Vector2(780f, 360f), new Color(0.21f, 0.08f, 0.035f, 0.96f), paleGold, 30);
         closeButton.onClick.AddListener(() => closeAction?.Invoke());
 
-        RectTransform instructionPanel = CreateRect("InstructionPanel", frame, new Vector2(430f, 600f), new Vector2(-605f, -35f));
+        RectTransform instructionPanel = CreateRect("InstructionPanel", frame, new Vector2(370f, 520f), new Vector2(-510f, -30f));
         Image instructionBackground = AddImage(instructionPanel.gameObject, bellPullBackground, new Color(0.78f, 0.68f, 0.56f, 1f));
         instructionBackground.preserveAspect = false;
         AddOutline(instructionPanel.gameObject, new Color(gold.r, gold.g, gold.b, 0.75f), new Vector2(3f, -3f));
-        CreateText("InstructionTitle", instructionPanel, "QUY TẮC HÒA ÂM", 27, FontStyle.Bold, paleGold, new Vector2(350f, 48f), new Vector2(0f, 250f), TextAnchor.MiddleCenter, true);
+        CreateText("InstructionTitle", instructionPanel, "QUY TẮC HÒA ÂM", 22, FontStyle.Bold, paleGold, new Vector2(320f, 40f), new Vector2(0f, 185f), TextAnchor.MiddleCenter, true);
         string[] displayedRules =
         {
             "Chuông La phải được rung trước chuông Mi.",
@@ -183,92 +219,92 @@ public class BellSequencePuzzleUI : MonoBehaviour
         };
         for (int i = 0; i < displayedRules.Length; i++)
         {
-            float ruleY = 160f - i * 90f;
-            RectTransform ruleRow = CreateRect("RuleRow_" + (i + 1), instructionPanel, new Vector2(382f, 80f), new Vector2(0f, ruleY));
+            float ruleY = 100f - i * 72f;
+            RectTransform ruleRow = CreateRect("RuleRow_" + (i + 1), instructionPanel, new Vector2(330f, 68f), new Vector2(0f, ruleY));
             AddImage(ruleRow.gameObject, null, new Color(0.10f, 0.045f, 0.018f, 0.42f));
             AddOutline(ruleRow.gameObject, new Color(gold.r, gold.g, gold.b, 0.28f), new Vector2(1f, -1f));
-            RectTransform numberPlate = CreateRect("RuleNumber", ruleRow, new Vector2(38f, 36f), new Vector2(-163f, 0f));
+            RectTransform numberPlate = CreateRect("RuleNumber", ruleRow, new Vector2(32f, 30f), new Vector2(-145f, 0f));
             AddImage(numberPlate.gameObject, null, new Color(0.23f, 0.10f, 0.035f, 0.96f));
             AddOutline(numberPlate.gameObject, gold, new Vector2(2f, -2f));
-            CreateText("Value", numberPlate, (i + 1).ToString(), 20, FontStyle.Bold, paleGold, new Vector2(36f, 34f), Vector2.zero, TextAnchor.MiddleCenter, true);
-            Text ruleText = CreateText("RuleText", ruleRow, displayedRules[i], 16, FontStyle.Bold, warmText, new Vector2(316f, 70f), new Vector2(24f, 0f), TextAnchor.MiddleLeft, true);
+            CreateText("Value", numberPlate, (i + 1).ToString(), 14, FontStyle.Bold, paleGold, new Vector2(30f, 28f), Vector2.zero, TextAnchor.MiddleCenter, true);
+            Text ruleText = CreateText("RuleText", ruleRow, displayedRules[i], 13, FontStyle.Bold, warmText, new Vector2(270f, 60f), new Vector2(20f, 0f), TextAnchor.MiddleLeft, true);
             ruleText.resizeTextForBestFit = true;
-            ruleText.resizeTextMinSize = 13;
-            ruleText.resizeTextMaxSize = 16;
+            ruleText.resizeTextMinSize = 9;
+            ruleText.resizeTextMaxSize = 13;
         }
 
-        RectTransform sequencePanel = CreateRect("PlayerSequencePanel", frame, new Vector2(730f, 600f), new Vector2(5f, -35f));
+        RectTransform sequencePanel = CreateRect("PlayerSequencePanel", frame, new Vector2(620f, 520f), new Vector2(0f, -30f));
         Image sequenceBackground = AddImage(sequencePanel.gameObject, bellPullBackground, new Color(0.92f, 0.84f, 0.70f, 0.72f));
         sequenceBackground.preserveAspect = false;
         AddOutline(sequencePanel.gameObject, new Color(gold.r, gold.g, gold.b, 0.60f), new Vector2(3f, -3f));
-        CreateText("SequenceTitle", sequencePanel, "CHUỖI CHUÔNG ĐÃ CHỌN", 26, FontStyle.Bold, paleGold, new Vector2(620f, 46f), new Vector2(0f, 242f), TextAnchor.MiddleCenter, true);
-        RectTransform selectedSlots = CreateRect("SelectedSlots", sequencePanel, new Vector2(640f, 176f), new Vector2(0f, 112f));
+        CreateText("SequenceTitle", sequencePanel, "CHUỖI CHUÔNG ĐÃ CHỌN", 21, FontStyle.Bold, paleGold, new Vector2(550f, 40f), new Vector2(0f, 185f), TextAnchor.MiddleCenter, true);
+        RectTransform selectedSlots = CreateRect("SelectedSlots", sequencePanel, new Vector2(550f, 150f), new Vector2(0f, 75f));
         for (int i = 0; i < BellNames.Length; i++)
         {
-            BuildSequenceSlot(selectedSlots, i, new Vector2(-275f + i * 110f, 0f));
+            BuildSequenceSlot(selectedSlots, i, new Vector2(-212.5f + i * 85f, 0f));
         }
 
-        feedbackText = CreateText("Feedback", sequencePanel, string.Empty, 21, FontStyle.Bold, warmText, new Vector2(620f, 56f), new Vector2(0f, -55f), TextAnchor.MiddleCenter, true);
+        feedbackText = CreateText("Feedback", sequencePanel, string.Empty, 18, FontStyle.Bold, warmText, new Vector2(550f, 40f), new Vector2(0f, -50f), TextAnchor.MiddleCenter, true);
 
-        submitButton = CreateButton("ConfirmButton", sequencePanel, "XÁC NHẬN HÒA ÂM", new Vector2(260f, 70f), new Vector2(-145f, -225f), new Color(0.12f, 0.20f, 0.25f, 0.96f), paleGold, 21);
+        submitButton = CreateButton("ConfirmButton", sequencePanel, "XÁC NHẬN HÒA ÂM", new Vector2(220f, 60f), new Vector2(-125f, -175f), new Color(0.12f, 0.20f, 0.25f, 0.96f), paleGold, 17);
         submitButton.onClick.AddListener(RequestSubmit);
-        Button resetButton = CreateButton("ResetButton", sequencePanel, "ĐẶT LẠI", new Vector2(260f, 70f), new Vector2(145f, -225f), new Color(0.36f, 0.11f, 0.055f, 0.96f), paleGold, 21);
+        resetButton = CreateButton("ResetButton", sequencePanel, "ĐẶT LẠI", new Vector2(220f, 60f), new Vector2(125f, -175f), new Color(0.36f, 0.11f, 0.055f, 0.96f), paleGold, 17);
         resetButton.onClick.AddListener(ResetSequence);
 
-        RectTransform controlsPanel = CreateRect("BellControlsPanel", frame, new Vector2(420f, 600f), new Vector2(610f, -35f));
+        RectTransform controlsPanel = CreateRect("BellControlsPanel", frame, new Vector2(360f, 520f), new Vector2(510f, -30f));
         Image controlsBackground = AddImage(controlsPanel.gameObject, bellPullBackground, new Color(0.86f, 0.76f, 0.62f, 1f));
         controlsBackground.preserveAspect = false;
         AddOutline(controlsPanel.gameObject, new Color(gold.r, gold.g, gold.b, 0.75f), new Vector2(3f, -3f));
-        CreateText("ControlsTitle", controlsPanel, "DÂY CHUÔNG", 27, FontStyle.Bold, paleGold, new Vector2(340f, 46f), new Vector2(0f, 248f), TextAnchor.MiddleCenter, true);
-        CreateText("ControlsSubtitle", controlsPanel, "Âm thấp  →  Âm cao", 16, FontStyle.Normal, warmText, new Vector2(280f, 30f), new Vector2(0f, 215f), TextAnchor.MiddleCenter, true);
+        CreateText("ControlsTitle", controlsPanel, "DÂY CHUÔNG", 22, FontStyle.Bold, paleGold, new Vector2(320f, 40f), new Vector2(0f, 185f), TextAnchor.MiddleCenter, true);
+        CreateText("ControlsSubtitle", controlsPanel, "Âm thấp  →  Âm cao", 14, FontStyle.Normal, warmText, new Vector2(300f, 25f), new Vector2(0f, 155f), TextAnchor.MiddleCenter, true);
         for (int i = 0; i < BellNames.Length; i++)
         {
             int column = i % 3;
             int row = i / 3;
-            BuildBellControl(controlsPanel, i, new Vector2(-125f + column * 125f, 92f - row * 240f));
+            BuildBellControl(controlsPanel, i, new Vector2(-105f + column * 105f, 40f - row * 195f));
         }
     }
 
     private void BuildSequenceSlot(Transform parent, int index, Vector2 position)
     {
-        RectTransform slot = CreateRect("SequenceSlot_" + (index + 1), parent, new Vector2(100f, 148f), position);
+        RectTransform slot = CreateRect("SequenceSlot_" + (index + 1), parent, new Vector2(80f, 118f), position);
         Image slotBackground = AddImage(slot.gameObject, bellBackground, new Color(1f, 1f, 1f, 0.92f));
         slotBackground.preserveAspect = true;
         slotBackground.raycastTarget = false;
-        CreateText("Position", slot, (index + 1).ToString(), 20, FontStyle.Bold, gold, new Vector2(36f, 30f), new Vector2(0f, 58f), TextAnchor.MiddleCenter, true);
-        Image selectedBell = AddImage(CreateRect("SelectedBell", slot, new Vector2(52f, 70f), new Vector2(0f, 5f)).gameObject, bellIcon, Color.white);
+        CreateText("Position", slot, (index + 1).ToString(), 16, FontStyle.Bold, gold, new Vector2(36f, 30f), new Vector2(0f, 46f), TextAnchor.MiddleCenter, true);
+        Image selectedBell = AddImage(CreateRect("SelectedBell", slot, new Vector2(42f, 57f), new Vector2(0f, 4f)).gameObject, bellIcon, Color.white);
         selectedBell.preserveAspect = true;
         selectedBell.raycastTarget = false;
         selectedBell.gameObject.SetActive(false);
         sequenceSlotBells[index] = selectedBell;
-        sequenceSlotLabels[index] = CreateText("SelectedName", slot, "", 19, FontStyle.Bold, paleGold, new Vector2(88f, 30f), new Vector2(0f, -52f), TextAnchor.MiddleCenter, true);
+        sequenceSlotLabels[index] = CreateText("SelectedName", slot, "", 14, FontStyle.Bold, paleGold, new Vector2(76f, 26f), new Vector2(0f, -41f), TextAnchor.MiddleCenter, true);
     }
 
     private void BuildBellControl(Transform parent, int index, Vector2 position)
     {
-        RectTransform slot = CreateRect("BellControl_" + BellNames[index], parent, new Vector2(110f, 215f), position);
+        RectTransform slot = CreateRect("BellControl_" + BellNames[index], parent, new Vector2(92f, 185f), position);
         Image highlight = AddImage(slot.gameObject, null, new Color(0.12f, 0.07f, 0.03f, 0.08f));
         AddOutline(slot.gameObject, new Color(gold.r, gold.g, gold.b, 0.35f), new Vector2(2f, -2f));
         slotHighlights[index] = highlight;
 
-        RectTransform badgeRoot = CreateRect("OrderBadge", slot, new Vector2(38f, 34f), new Vector2(36f, 87f));
+        RectTransform badgeRoot = CreateRect("OrderBadge", slot, new Vector2(32f, 30f), new Vector2(30f, 74f));
         Image badgeBackground = AddImage(badgeRoot.gameObject, null, new Color(0.20f, 0.095f, 0.035f, 0.96f));
         badgeBackground.raycastTarget = false;
         AddOutline(badgeRoot.gameObject, gold, new Vector2(2f, -2f));
-        Text badge = CreateText("Value", badgeRoot, "", 21, FontStyle.Bold, paleGold, new Vector2(36f, 32f), Vector2.zero, TextAnchor.MiddleCenter, true);
+        Text badge = CreateText("Value", badgeRoot, "", 16, FontStyle.Bold, paleGold, new Vector2(30f, 28f), Vector2.zero, TextAnchor.MiddleCenter, true);
         orderBadges[index] = badge;
         badgeRoot.gameObject.SetActive(false);
 
-        Image bellFrame = AddImage(CreateRect("BellBackground", slot, new Vector2(96f, 75f), new Vector2(0f, 64f)).gameObject, bellBackground, Color.white);
+        Image bellFrame = AddImage(CreateRect("BellBackground", slot, new Vector2(80f, 64f), new Vector2(0f, 52f)).gameObject, bellBackground, Color.white);
         bellFrame.preserveAspect = true;
         bellFrame.raycastTarget = false;
-        Image bell = AddImage(CreateRect("Bell", slot, new Vector2(50f, 65f), new Vector2(0f, 64f)).gameObject, bellIcon, Color.white);
+        Image bell = AddImage(CreateRect("Bell", slot, new Vector2(42f, 55f), new Vector2(0f, 52f)).gameObject, bellIcon, Color.white);
         bell.preserveAspect = true;
         bell.raycastTarget = false;
 
-        Text nameLabel = CreateText("BellName", slot, BellNames[index], 20, FontStyle.Bold, paleGold, new Vector2(94f, 30f), new Vector2(0f, 14f), TextAnchor.MiddleCenter, true);
+        Text nameLabel = CreateText("BellName", slot, BellNames[index], 15, FontStyle.Bold, paleGold, new Vector2(82f, 24f), new Vector2(0f, 10f), TextAnchor.MiddleCenter, true);
 
-        RectTransform ropeFrameRect = CreateRect("RopeButton", slot, new Vector2(98f, 105f), new Vector2(0f, -58f));
+        RectTransform ropeFrameRect = CreateRect("RopeButton", slot, new Vector2(80f, 88f), new Vector2(0f, -48f));
         Image ropeFrame = AddImage(ropeFrameRect.gameObject, bellPullBackground, Color.white);
         ropeFrame.preserveAspect = true;
         Button button = ropeFrameRect.gameObject.AddComponent<Button>();
@@ -284,7 +320,7 @@ public class BellSequencePuzzleUI : MonoBehaviour
         button.onClick.AddListener(() => SelectBellByIndex(capturedIndex));
         ropeButtons[index] = button;
 
-        Image rope = AddImage(CreateRect("BellPull", ropeFrameRect, new Vector2(22f, 95f), new Vector2(0f, -2f)).gameObject, bellPull, Color.white);
+        Image rope = AddImage(CreateRect("BellPull", ropeFrameRect, new Vector2(18f, 78f), new Vector2(0f, -1f)).gameObject, bellPull, Color.white);
         rope.preserveAspect = true;
         rope.raycastTarget = false;
         ropeImages[index] = rope;
