@@ -139,6 +139,16 @@ public static class NguyenHueLedPanelInstaller
         UpdateHintMessage(root, hintMessage);
         UpdateTextLabel(root.transform, labelText);
         ConfigureHintDisplay(root, labelText, clueNumber, clueColor);
+        LEDHintInteractable hint = root.GetComponent<LEDHintInteractable>();
+        if (hint != null)
+        {
+            hint.screenMaterial = screenMaterial;
+            if (hint.screenRenderer != null)
+            {
+                hint.screenRenderer.sharedMaterial = screenMaterial;
+            }
+            EditorUtility.SetDirty(hint);
+        }
         EditorUtility.SetDirty(root);
     }
 

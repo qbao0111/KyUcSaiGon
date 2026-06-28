@@ -29,10 +29,10 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6970392356548521887}
+  - {fileID: 3994668649534865111}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &7435855952799156340
+--- !u!1001 &3523310818405341500
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -50,11 +50,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.95585513
+      value: 0.95585525
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.2589269
+      value: -0.25892693
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
       propertyPath: m_LocalPosition.y
@@ -98,15 +98,15 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 3316ecab8ad15494886138d152a2f1b9, type: 2}
     - target: {fileID: 919132149155446097, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
       propertyPath: m_Name
-      value: Visual_REPLACE_NguyenHue_FacadeRow_Left
+      value: nguyen_hue_facade_row_left
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
---- !u!4 &6970392356548521887 stripped
+--- !u!4 &3994668649534865111 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d37e923ae54780243ad55905b2973f2f, type: 3}
-  m_PrefabInstance: {fileID: 7435855952799156340}
+  m_PrefabInstance: {fileID: 3523310818405341500}
   m_PrefabAsset: {fileID: 0}

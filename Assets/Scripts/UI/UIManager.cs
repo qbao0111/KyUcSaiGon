@@ -384,6 +384,7 @@ public class UIManager : MonoBehaviour
         }
 
         selectedStepperIndex = 0;
+        nextStepperKeyboardTime = Time.unscaledTime + 0.3f;
         RefreshStepperInput(puzzle);
     }
 
@@ -461,6 +462,11 @@ public class UIManager : MonoBehaviour
 
         if (activePuzzle != null && activePuzzle.useThreeValueStepper)
         {
+            if (Time.unscaledTime < nextStepperKeyboardTime)
+            {
+                return;
+            }
+
             string digit = GameInput.PressedPuzzleToken();
             if (!string.IsNullOrEmpty(digit) && int.TryParse(digit, out int digitValue))
             {
@@ -474,11 +480,6 @@ public class UIManager : MonoBehaviour
             }
 
             Vector2 move = GameInput.Move;
-            if (Time.unscaledTime < nextStepperKeyboardTime)
-            {
-                return;
-            }
-
             if (move.x < -0.5f)
             {
                 selectedStepperIndex = (selectedStepperIndex + stepperValues.Length - 1) % stepperValues.Length;

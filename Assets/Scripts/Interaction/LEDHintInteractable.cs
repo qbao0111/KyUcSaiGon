@@ -14,6 +14,7 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
     public TextMeshPro labelText;
     public TextMeshPro numberText;
     public Renderer screenRenderer;
+    public Material screenMaterial;
     [Header("Editable Layout")]
     public bool autoLayout = true;
     public Vector3 screenLocalPosition = new Vector3(0f, 2.023f, -0.18f);
@@ -270,19 +271,30 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
 
         if (screenRenderer != null)
         {
-            Material material = Application.isPlaying
-                ? (runtimeScreenMaterial ??= screenRenderer.material)
-                : screenRenderer.sharedMaterial;
+            if (screenMaterial != null && screenRenderer.sharedMaterial != screenMaterial)
+            {
+                screenRenderer.sharedMaterial = screenMaterial;
+            }
+
+            Material material = null;
+            if (Application.isPlaying)
+            {
+                if (runtimeScreenMaterial == null)
+                {
+                    runtimeScreenMaterial = screenRenderer.material;
+                }
+                material = runtimeScreenMaterial;
+            }
+            else
+            {
+                material = screenRenderer.sharedMaterial;
+            }
 
             if (material == null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null)
-                {
-                    shader = Shader.Find("Standard");
-                }
-
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
                 material = new Material(shader);
+                material.name = "M_LEDHint_Screen_Local";
                 if (Application.isPlaying)
                 {
                     runtimeScreenMaterial = material;
