@@ -17,13 +17,13 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
     public Material screenMaterial;
     [Header("Editable Layout")]
     public bool autoLayout = true;
-    public Vector3 screenLocalPosition = new Vector3(0f, 2.023f, -0.18f);
+    public Vector3 screenLocalPosition = new Vector3(0f, 2.023f, -0.21f);
     public Vector3 screenLocalScale = new Vector3(1.18f, 1.48f, 0.025f);
-    public Vector3 labelLocalPosition = new Vector3(0f, 1.98f, -0.215f);
+    public Vector3 labelLocalPosition = new Vector3(0f, 1.98f, -0.225f);
     public Vector3 labelLocalScale = Vector3.one * 0.16f;
     public Vector2 labelSize = new Vector2(5.2f, 1.1f);
     public float labelFontSize = 6.5f;
-    public Vector3 numberLocalPosition = new Vector3(0f, 1.27f, -0.225f);
+    public Vector3 numberLocalPosition = new Vector3(0f, 1.27f, -0.235f);
     public Vector3 numberLocalScale = Vector3.one * 0.34f;
     public Vector2 numberSize = new Vector2(3.2f, 2.9f);
     public float numberFontSize = 22f;
@@ -42,6 +42,14 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
     private string resolvedNumber;
 
     public string InteractionPrompt => "Nhấn E để xem màn hình LED";
+
+    private void Awake()
+    {
+        if (!enabled)
+        {
+            enabled = true;
+        }
+    }
 
     private void OnEnable()
     {
@@ -72,8 +80,11 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
 
         if (screenRenderer != null)
         {
-            Material material = screenRenderer.material;
-            ApplyEmission(material, resolvedColor, Mathf.Lerp(screenEmissionIdle, screenEmissionPulse, pulse));
+            if (runtimeScreenMaterial == null)
+            {
+                runtimeScreenMaterial = screenRenderer.material;
+            }
+            ApplyEmission(runtimeScreenMaterial, resolvedColor, Mathf.Lerp(screenEmissionIdle, screenEmissionPulse, pulse));
         }
     }
 

@@ -63,6 +63,16 @@ public class UIManager : MonoBehaviour
     private RectTransform hudStatusPanel;
     private RectTransform hudAccentBar;
     private string currentObjectiveText;
+    private RectTransform hudProgressPanel;
+    private RectTransform hudObjectivePanel;
+    private Image hudProgressBarFill;
+    private CanvasGroup hudProgressCanvasGroup;
+    private CanvasGroup hudObjectiveCanvasGroup;
+    private CanvasGroup hudInteractionCanvasGroup;
+    private Coroutine hudProgressAnim;
+    private Coroutine hudObjectiveAnim;
+    private Coroutine hudInteractionAnim;
+    private int lastDisplayedMemoryCount = -1;
 
     private class MixerColumnUi
     {
@@ -108,8 +118,26 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        interactionPromptText.gameObject.SetActive(visible);
         interactionPromptText.text = string.IsNullOrEmpty(prompt) ? "Press E to interact" : prompt;
+
+        if (hudInteractionCanvasGroup != null)
+        {
+            if (visible)
+            {
+                hudInteractionCanvasGroup.gameObject.SetActive(true);
+                if (hudInteractionAnim != null) StopCoroutine(hudInteractionAnim);
+                hudInteractionAnim = StartCoroutine(AnimateFade(hudInteractionCanvasGroup, 1f, 0.25f));
+            }
+            else
+            {
+                if (hudInteractionAnim != null) StopCoroutine(hudInteractionAnim);
+                hudInteractionAnim = StartCoroutine(AnimateFadeAndDeactivate(hudInteractionCanvasGroup, 0.15f));
+            }
+        }
+        else
+        {
+            interactionPromptText.gameObject.SetActive(visible);
+        }
     }
 
     public void ShowDialogue(string message)
@@ -147,6 +175,7 @@ public class UIManager : MonoBehaviour
         {
             currentObjectiveText = objective;
             AudioManager.EnsureInstance().PlaySfx("SFX_ObjectiveUpdated", 0.75f);
+            AnimateObjectiveUpdate();
         }
     }
 
@@ -159,6 +188,13 @@ public class UIManager : MonoBehaviour
 
         int count = GameProgressManager.Instance != null ? GameProgressManager.Instance.memoryFragmentsCollected : 0;
         memoryProgressText.text = "Ký ức: " + count + "/" + GameProgressManager.RequiredMemoryFragments;
+        UpdateProgressBar();
+
+        if (count != lastDisplayedMemoryCount && lastDisplayedMemoryCount >= 0)
+        {
+            AnimateProgressUpdate();
+        }
+        lastDisplayedMemoryCount = count;
     }
 
     public void ShowPuzzle(PuzzleInteractable puzzle)
@@ -1303,11 +1339,6 @@ public class UIManager : MonoBehaviour
 
     private void NormalizeHudLayout()
     {
-        if (!ShouldUseCinematicHud())
-        {
-            return;
-        }
-
         CanvasScaler scaler = GetComponentInParent<CanvasScaler>();
         if (scaler != null)
         {
@@ -1316,150 +1347,432 @@ public class UIManager : MonoBehaviour
             scaler.matchWidthOrHeight = 0.5f;
         }
 
-        EnsureHudStatusPanel();
-        ConfigureTopLeftHudText(memoryProgressText, new Vector2(56f, -22f), new Vector2(430f, 24f), 14);
-        ConfigureTopLeftHudText(objectiveText, new Vector2(56f, -48f), new Vector2(470f, 34f), 15);
+        EnsureProgressPanel();
+        EnsureObjectivePanel();
+        StyleInteractionPrompt();
+        StyleDialogueBox();
 
-        RectTransform promptRect = interactionPromptText != null ? interactionPromptText.GetComponent<RectTransform>() : null;
-        if (promptRect != null)
-        {
-            promptRect.anchorMin = new Vector2(0.5f, 0.22f);
-            promptRect.anchorMax = new Vector2(0.5f, 0.22f);
-            promptRect.pivot = new Vector2(0.5f, 0.5f);
-            promptRect.sizeDelta = new Vector2(900f, 52f);
-            promptRect.anchoredPosition = Vector2.zero;
-        }
-
-        if (interactionPromptText != null)
-        {
-            interactionPromptText.fontSize = 24;
-            interactionPromptText.alignment = TextAnchor.MiddleCenter;
-            EnsureShadow(interactionPromptText, new Color(0f, 0f, 0f, 0.75f), new Vector2(2f, -2f));
-        }
+        StartCoroutine(AnimateHudEntrance());
     }
 
     private bool ShouldUseCinematicHud()
     {
-        string sceneName = SceneManager.GetActiveScene().name;
-        return sceneName == SceneLoader.BusHub
-            || sceneName == SceneLoader.NguyenHue
-            || sceneName == SceneLoader.Ending
-            || sceneName == SceneLoader.NhaThoDucBa;
+        return true;
     }
 
-    private void ConfigureTopLeftHudText(Text text, Vector2 anchoredPosition, Vector2 size, int fontSize)
+    private void EnsureProgressPanel()
     {
-        if (text == null)
+        if (memoryProgressText == null) return;
+        Transform canvasRoot = memoryProgressText.transform.parent;
+
+        if (hudProgressPanel == null)
         {
-            return;
+            Transform existing = canvasRoot.Find("HUD_ProgressPanel");
+            if (existing != null) hudProgressPanel = existing.GetComponent<RectTransform>();
         }
 
-        RectTransform rect = text.GetComponent<RectTransform>();
-        if (rect == null)
+        if (hudProgressPanel == null)
         {
-            return;
-        }
+            GameObject panel = new GameObject("HUD_ProgressPanel", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            panel.transform.SetParent(canvasRoot, false);
+            hudProgressPanel = panel.GetComponent<RectTransform>();
+            hudProgressCanvasGroup = panel.GetComponent<CanvasGroup>();
 
-        rect.anchorMin = new Vector2(0f, 1f);
-        rect.anchorMax = new Vector2(0f, 1f);
-        rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = anchoredPosition;
-        rect.sizeDelta = size;
-
-        text.font = GameUIFont.Regular;
-        text.fontSize = fontSize;
-        text.fontStyle = FontStyle.Normal;
-        text.color = new Color(0.98f, 0.94f, 0.86f, 0.96f);
-        text.alignment = TextAnchor.UpperLeft;
-        text.horizontalOverflow = HorizontalWrapMode.Wrap;
-        text.verticalOverflow = VerticalWrapMode.Truncate;
-        EnsureShadow(text, new Color(0f, 0f, 0f, 0.8f), new Vector2(1.25f, -1.25f));
-        EnsureOutline(text, new Color(0f, 0f, 0f, 0.28f), new Vector2(0.75f, -0.75f));
-    }
-
-    private void EnsureHudStatusPanel()
-    {
-        Text anchorText = memoryProgressText != null ? memoryProgressText : objectiveText;
-        if (anchorText == null || anchorText.transform.parent == null)
-        {
-            return;
-        }
-
-        Transform parent = anchorText.transform.parent;
-        if (hudStatusPanel == null)
-        {
-            Transform existing = parent.Find("HUD_StatusPanel");
-            if (existing != null)
-            {
-                hudStatusPanel = existing.GetComponent<RectTransform>();
-            }
-        }
-
-        if (hudStatusPanel == null)
-        {
-            GameObject panel = new GameObject("HUD_StatusPanel", typeof(RectTransform), typeof(Image));
-            panel.transform.SetParent(parent, false);
-            hudStatusPanel = panel.GetComponent<RectTransform>();
-
-            Image image = panel.GetComponent<Image>();
-            image.sprite = CreateRoundedSprite(Color.white, 18);
-            image.type = Image.Type.Sliced;
+            Image bg = panel.GetComponent<Image>();
+            bg.sprite = CreateRoundedSprite(Color.white, 16);
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.04f, 0.05f, 0.09f, 0.78f);
+            bg.raycastTarget = false;
 
             Shadow shadow = panel.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.38f);
-            shadow.effectDistance = new Vector2(2f, -2f);
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.5f);
+            shadow.effectDistance = new Vector2(0f, -3f);
+
+            Outline outline = panel.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.75f, 0.22f, 0.12f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            RectTransform accentLine = CreateRect("AccentLine", hudProgressPanel, new Vector2(260f, 2.5f), new Vector2(0f, 32f));
+            Image accentImg = AddImage(accentLine.gameObject, new Color(1f, 0.75f, 0.22f, 0.6f));
+            accentImg.sprite = CreateRoundedSprite(Color.white, 2);
+            accentImg.type = Image.Type.Sliced;
+
+            // Create an Image for the Vietnamese lantern icon loaded from Resources
+            GameObject iconGo = new GameObject("ProgressIcon", typeof(RectTransform), typeof(Image));
+            iconGo.transform.SetParent(hudProgressPanel, false);
+            RectTransform iconRect = iconGo.GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.sizeDelta = new Vector2(40f, 40f); // 40x40 for a clear lantern icon
+            iconRect.anchoredPosition = new Vector2(-112f, 8f);
+
+            Image iconImg = iconGo.GetComponent<Image>();
+            iconImg.preserveAspect = true; // Preserve aspect ratio
+            UnityEngine.Texture2D lanternTex = Resources.Load<UnityEngine.Texture2D>("UI/I_VietnameseLantern");
+            if (lanternTex != null)
+            {
+                Sprite lanternSprite = Sprite.Create(lanternTex, new Rect(0f, 0f, lanternTex.width, lanternTex.height), new Vector2(0.5f, 0.5f));
+                iconImg.sprite = lanternSprite;
+                iconImg.color = Color.white;
+            }
+            else
+            {
+                // Fallback to gold diamond if texture load fails
+                iconImg.color = new Color(1f, 0.78f, 0.28f);
+                iconRect.sizeDelta = new Vector2(9f, 9f);
+                iconRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            }
+            iconImg.raycastTarget = false;
         }
-
-        hudStatusPanel.anchorMin = new Vector2(0f, 1f);
-        hudStatusPanel.anchorMax = new Vector2(0f, 1f);
-        hudStatusPanel.pivot = new Vector2(0f, 1f);
-        hudStatusPanel.anchoredPosition = new Vector2(24f, -24f);
-        hudStatusPanel.sizeDelta = new Vector2(520f, 82f);
-        hudStatusPanel.SetAsFirstSibling();
-
-        Image panelImage = hudStatusPanel.GetComponent<Image>();
-        if (panelImage != null)
+        else
         {
-            panelImage.color = new Color(0.05f, 0.035f, 0.03f, 0.58f);
+            hudProgressCanvasGroup = hudProgressPanel.GetComponent<CanvasGroup>();
         }
 
-        EnsureHudAccentBar();
+        hudProgressPanel.anchorMin = new Vector2(0f, 1f);
+        hudProgressPanel.anchorMax = new Vector2(0f, 1f);
+        hudProgressPanel.pivot = new Vector2(0f, 1f);
+        hudProgressPanel.anchoredPosition = new Vector2(28f, -28f);
+        hudProgressPanel.sizeDelta = new Vector2(290f, 72f);
+        hudProgressPanel.SetAsFirstSibling();
+
+        if (hudProgressCanvasGroup != null) hudProgressCanvasGroup.alpha = 0f;
+
+        memoryProgressText.transform.SetParent(hudProgressPanel, false);
+        RectTransform pRect = memoryProgressText.GetComponent<RectTransform>();
+        pRect.anchorMin = new Vector2(0.5f, 0.5f);
+        pRect.anchorMax = new Vector2(0.5f, 0.5f);
+        pRect.pivot = new Vector2(0.5f, 0.5f);
+        pRect.anchoredPosition = new Vector2(18f, 8f);
+        pRect.sizeDelta = new Vector2(220f, 32f);
+
+        memoryProgressText.font = GameUIFont.Bold;
+        memoryProgressText.fontSize = 22;
+        memoryProgressText.color = new Color(0.98f, 0.95f, 0.86f);
+        memoryProgressText.alignment = TextAnchor.MiddleLeft;
+        EnsureShadow(memoryProgressText, new Color(0f, 0f, 0f, 0.6f), new Vector2(1f, -1f));
+
+        EnsureProgressBar();
     }
 
-    private void EnsureHudAccentBar()
+    private void EnsureProgressBar()
     {
-        if (hudStatusPanel == null)
+        if (hudProgressPanel == null) return;
+        Transform barBg = hudProgressPanel.Find("ProgressBarBg");
+        if (barBg == null)
         {
-            return;
+            RectTransform bgRect = CreateRect("ProgressBarBg", hudProgressPanel, new Vector2(240f, 5f), new Vector2(5f, -22f));
+            Image bgImg = AddImage(bgRect.gameObject, new Color(1f, 1f, 1f, 0.1f));
+            bgImg.sprite = CreateRoundedSprite(Color.white, 3);
+            bgImg.type = Image.Type.Sliced;
+            bgImg.raycastTarget = false;
+
+            RectTransform fillRect = CreateRect("ProgressBarFill", bgRect, new Vector2(0f, 3.5f), Vector2.zero);
+            fillRect.anchorMin = new Vector2(0f, 0.5f);
+            fillRect.anchorMax = new Vector2(0f, 0.5f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.anchoredPosition = new Vector2(1f, 0f);
+            hudProgressBarFill = AddImage(fillRect.gameObject, new Color(1f, 0.75f, 0.22f, 0.85f));
+            hudProgressBarFill.sprite = CreateRoundedSprite(Color.white, 3);
+            hudProgressBarFill.type = Image.Type.Sliced;
+            hudProgressBarFill.raycastTarget = false;
+        }
+        else
+        {
+            Transform fill = barBg.Find("ProgressBarFill");
+            if (fill != null) hudProgressBarFill = fill.GetComponent<Image>();
+        }
+        UpdateProgressBar();
+    }
+
+    private void UpdateProgressBar()
+    {
+        if (hudProgressBarFill == null) return;
+        int count = GameProgressManager.Instance != null ? GameProgressManager.Instance.memoryFragmentsCollected : 0;
+        float ratio = Mathf.Clamp01((float)count / Mathf.Max(1, GameProgressManager.RequiredMemoryFragments));
+        hudProgressBarFill.rectTransform.sizeDelta = new Vector2(238f * ratio, 3.5f);
+    }
+
+    private void EnsureObjectivePanel()
+    {
+        if (objectiveText == null) return;
+        Transform canvasRoot = objectiveText.transform.parent;
+        if (hudProgressPanel != null && hudProgressPanel.parent != null)
+            canvasRoot = hudProgressPanel.parent;
+
+        if (hudObjectivePanel == null)
+        {
+            Transform existing = canvasRoot.Find("HUD_ObjectivePanel");
+            if (existing != null) hudObjectivePanel = existing.GetComponent<RectTransform>();
         }
 
-        if (hudAccentBar == null)
+        if (hudObjectivePanel == null)
         {
-            Transform existing = hudStatusPanel.Find("HUD_AccentBar");
-            if (existing != null)
+            GameObject panel = new GameObject("HUD_ObjectivePanel", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            panel.transform.SetParent(canvasRoot, false);
+            hudObjectivePanel = panel.GetComponent<RectTransform>();
+            hudObjectiveCanvasGroup = panel.GetComponent<CanvasGroup>();
+
+            Image bg = panel.GetComponent<Image>();
+            bg.sprite = CreateRoundedSprite(Color.white, 12);
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.04f, 0.05f, 0.08f, 0.65f);
+            bg.raycastTarget = false;
+
+            Shadow shadow = panel.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            shadow.effectDistance = new Vector2(0f, -2f);
+
+            RectTransform accent = CreateRect("AccentBar", hudObjectivePanel, new Vector2(4f, 36f), Vector2.zero);
+            accent.anchorMin = new Vector2(0f, 0.5f);
+            accent.anchorMax = new Vector2(0f, 0.5f);
+            accent.pivot = new Vector2(0f, 0.5f);
+            accent.anchoredPosition = new Vector2(12f, 0f);
+            Image accentImg = AddImage(accent.gameObject, new Color(1f, 0.68f, 0.22f, 0.85f));
+            accentImg.sprite = CreateRoundedSprite(Color.white, 2);
+            accentImg.type = Image.Type.Sliced;
+            accentImg.raycastTarget = false;
+        }
+        else
+        {
+            hudObjectiveCanvasGroup = hudObjectivePanel.GetComponent<CanvasGroup>();
+        }
+
+        hudObjectivePanel.anchorMin = new Vector2(0f, 1f);
+        hudObjectivePanel.anchorMax = new Vector2(0f, 1f);
+        hudObjectivePanel.pivot = new Vector2(0f, 1f);
+        hudObjectivePanel.anchoredPosition = new Vector2(28f, -110f);
+        hudObjectivePanel.sizeDelta = new Vector2(500f, 54f);
+
+        if (hudObjectiveCanvasGroup != null) hudObjectiveCanvasGroup.alpha = 0f;
+
+        objectiveText.transform.SetParent(hudObjectivePanel, false);
+        RectTransform oRect = objectiveText.GetComponent<RectTransform>();
+        oRect.anchorMin = Vector2.zero;
+        oRect.anchorMax = Vector2.one;
+        oRect.offsetMin = new Vector2(28f, 4f);
+        oRect.offsetMax = new Vector2(-12f, -4f);
+
+        objectiveText.font = GameUIFont.Regular;
+        objectiveText.fontSize = 18;
+        objectiveText.color = new Color(0.92f, 0.90f, 0.84f, 0.95f);
+        objectiveText.alignment = TextAnchor.MiddleLeft;
+        objectiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        objectiveText.verticalOverflow = VerticalWrapMode.Truncate;
+        EnsureShadow(objectiveText, new Color(0f, 0f, 0f, 0.65f), new Vector2(1f, -1f));
+    }
+
+    private void StyleInteractionPrompt()
+    {
+        if (interactionPromptText == null) return;
+
+        Transform canvasRoot = interactionPromptText.transform.parent;
+        if (canvasRoot != null && canvasRoot.name == "HUD_InteractionWrapper") return;
+
+        GameObject wrapper = new GameObject("HUD_InteractionWrapper", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        wrapper.transform.SetParent(canvasRoot, false);
+        RectTransform wrapperRect = wrapper.GetComponent<RectTransform>();
+
+        wrapperRect.anchorMin = new Vector2(0.5f, 0.22f);
+        wrapperRect.anchorMax = new Vector2(0.5f, 0.22f);
+        wrapperRect.pivot = new Vector2(0.5f, 0.5f);
+        wrapperRect.sizeDelta = new Vector2(650f, 50f); // Wider layout for floating text
+        wrapperRect.anchoredPosition = Vector2.zero;
+
+        Image bg = wrapper.GetComponent<Image>();
+        bg.enabled = false; // Hide background badge
+
+        hudInteractionCanvasGroup = wrapper.GetComponent<CanvasGroup>();
+
+        Outline promptOutline = wrapper.AddComponent<Outline>();
+        promptOutline.enabled = false; // Hide border outline
+
+        Shadow promptShadow = wrapper.AddComponent<Shadow>();
+        promptShadow.enabled = false; // Hide shadow outline
+
+        interactionPromptText.transform.SetParent(wrapper.transform, false);
+        RectTransform textRect = interactionPromptText.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(10f, 4f);
+        textRect.offsetMax = new Vector2(-10f, -4f);
+
+        interactionPromptText.fontSize = 24; // Larger text
+        interactionPromptText.font = GameUIFont.Bold; // Bold text
+        interactionPromptText.alignment = TextAnchor.MiddleCenter;
+        interactionPromptText.color = new Color(1f, 0.85f, 0.45f); // Rich warm gold/amber color
+
+        EnsureShadow(interactionPromptText, new Color(0f, 0f, 0f, 0.95f), new Vector2(2f, -2f));
+        EnsureOutline(interactionPromptText, new Color(0f, 0f, 0f, 0.95f), new Vector2(1.5f, -1.5f));
+    }
+
+    private void StyleDialogueBox()
+    {
+        if (dialogueBox == null) return;
+
+        RectTransform dialogueRect = dialogueBox.GetComponent<RectTransform>();
+        if (dialogueRect != null)
+        {
+            dialogueRect.anchorMin = new Vector2(0.5f, 0.10f);
+            dialogueRect.anchorMax = new Vector2(0.5f, 0.10f);
+            dialogueRect.pivot = new Vector2(0.5f, 0.5f);
+            dialogueRect.sizeDelta = new Vector2(950f, 120f); // Wider bounding box for text wrapping
+            dialogueRect.anchoredPosition = Vector2.zero;
+        }
+
+        Image dialogueBg = dialogueBox.GetComponent<Image>();
+        if (dialogueBg == null) dialogueBg = dialogueBox.AddComponent<Image>();
+        dialogueBg.enabled = false; // Hide background image
+
+        Outline border = dialogueBox.GetComponent<Outline>();
+        if (border == null) border = dialogueBox.AddComponent<Outline>();
+        border.enabled = false; // Hide border
+
+        Shadow dShadow = dialogueBox.GetComponent<Shadow>();
+        if (dShadow == null) dShadow = dialogueBox.AddComponent<Shadow>();
+        dShadow.enabled = false; // Hide shadow
+
+        if (dialogueText != null)
+        {
+            dialogueText.fontSize = 24;
+            dialogueText.font = GameUIFont.Bold; // Bold font is highly recommended for subtitles
+            dialogueText.color = new Color(0.98f, 0.98f, 0.96f); // Soft white for subtitles
+            dialogueText.alignment = TextAnchor.MiddleCenter;
+
+            RectTransform dtRect = dialogueText.GetComponent<RectTransform>();
+            if (dtRect != null)
             {
-                hudAccentBar = existing.GetComponent<RectTransform>();
+                dtRect.anchorMin = Vector2.zero;
+                dtRect.anchorMax = Vector2.one;
+                dtRect.offsetMin = new Vector2(10f, 10f);
+                dtRect.offsetMax = new Vector2(-10f, -10f);
             }
-        }
 
-        if (hudAccentBar == null)
+            EnsureShadow(dialogueText, new Color(0f, 0f, 0f, 0.95f), new Vector2(2f, -2f));
+            EnsureOutline(dialogueText, new Color(0f, 0f, 0f, 0.95f), new Vector2(1.5f, -1.5f));
+        }
+    }
+
+    private IEnumerator AnimateHudEntrance()
+    {
+        yield return null;
+
+        if (hudProgressPanel != null && hudProgressCanvasGroup != null)
         {
-            GameObject accent = new GameObject("HUD_AccentBar", typeof(RectTransform), typeof(Image));
-            accent.transform.SetParent(hudStatusPanel, false);
-            hudAccentBar = accent.GetComponent<RectTransform>();
+            Vector2 target = hudProgressPanel.anchoredPosition;
+            hudProgressPanel.anchoredPosition = target + new Vector2(-140f, 0f);
+            hudProgressCanvasGroup.alpha = 0f;
+            float elapsed = 0f;
+            float duration = 0.5f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = 1f - Mathf.Pow(1f - Mathf.Clamp01(elapsed / duration), 3f);
+                hudProgressCanvasGroup.alpha = t;
+                hudProgressPanel.anchoredPosition = Vector2.Lerp(target + new Vector2(-140f, 0f), target, t);
+                yield return null;
+            }
+            hudProgressCanvasGroup.alpha = 1f;
+            hudProgressPanel.anchoredPosition = target;
         }
 
-        hudAccentBar.anchorMin = new Vector2(0f, 0.5f);
-        hudAccentBar.anchorMax = new Vector2(0f, 0.5f);
-        hudAccentBar.pivot = new Vector2(0f, 0.5f);
-        hudAccentBar.anchoredPosition = new Vector2(18f, 0f);
-        hudAccentBar.sizeDelta = new Vector2(5f, 48f);
+        yield return new WaitForSecondsRealtime(0.08f);
 
-        Image image = hudAccentBar.GetComponent<Image>();
-        if (image != null)
+        if (hudObjectivePanel != null && hudObjectiveCanvasGroup != null)
         {
-            image.color = new Color(1f, 0.68f, 0.24f, 0.86f);
+            Vector2 target = hudObjectivePanel.anchoredPosition;
+            hudObjectivePanel.anchoredPosition = target + new Vector2(-120f, 0f);
+            hudObjectiveCanvasGroup.alpha = 0f;
+            float elapsed = 0f;
+            float duration = 0.45f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = 1f - Mathf.Pow(1f - Mathf.Clamp01(elapsed / duration), 3f);
+                hudObjectiveCanvasGroup.alpha = t;
+                hudObjectivePanel.anchoredPosition = Vector2.Lerp(target + new Vector2(-120f, 0f), target, t);
+                yield return null;
+            }
+            hudObjectiveCanvasGroup.alpha = 1f;
+            hudObjectivePanel.anchoredPosition = target;
         }
+    }
+
+    private void AnimateProgressUpdate()
+    {
+        if (hudProgressAnim != null) StopCoroutine(hudProgressAnim);
+        hudProgressAnim = StartCoroutine(PulsePanel(hudProgressPanel));
+    }
+
+    private void AnimateObjectiveUpdate()
+    {
+        if (hudObjectiveAnim != null) StopCoroutine(hudObjectiveAnim);
+        hudObjectiveAnim = StartCoroutine(FlashPanel(hudObjectivePanel, hudObjectiveCanvasGroup));
+    }
+
+    private IEnumerator PulsePanel(RectTransform panel)
+    {
+        if (panel == null) yield break;
+        float duration = 0.35f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
+            panel.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 1.06f, t);
+            yield return null;
+        }
+        panel.localScale = Vector3.one;
+    }
+
+    private IEnumerator FlashPanel(RectTransform panel, CanvasGroup group)
+    {
+        if (panel == null || group == null) yield break;
+
+        Vector2 original = panel.anchoredPosition;
+        float duration = 0.35f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float flashT = Mathf.Sin(t * Mathf.PI);
+            group.alpha = Mathf.Lerp(1f, 0.55f, flashT);
+            panel.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 1.03f, flashT);
+            yield return null;
+        }
+        group.alpha = 1f;
+        panel.localScale = Vector3.one;
+    }
+
+    private IEnumerator AnimateFade(CanvasGroup group, float target, float duration)
+    {
+        if (group == null) yield break;
+        float start = group.alpha;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            group.alpha = Mathf.Lerp(start, target, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+        group.alpha = target;
+    }
+
+    private IEnumerator AnimateFadeAndDeactivate(CanvasGroup group, float duration)
+    {
+        if (group == null) yield break;
+        float start = group.alpha;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            group.alpha = Mathf.Lerp(start, 0f, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+        group.alpha = 0f;
+        group.gameObject.SetActive(false);
     }
 
     private static void EnsureShadow(Text text, Color color, Vector2 distance)
