@@ -196,7 +196,8 @@ public class EndingSceneController : MonoBehaviour
 
         // 2. Play main dialogue
         UIManager.Instance?.ShowDialogue("BẠN ĐÃ TÌM LẠI KÝ ỨC ĐÔ THỊ\nTHÀNH PHỐ ĐÃ SỐNG TRỞ LẠI");
-        yield return new WaitForSeconds(3.5f);
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_1");
+        yield return new WaitForSeconds(4.2f);
 
         // Stop boat movement during the cinematic cutscene
         BoatMovement[] boatMovements = FindObjectsByType<BoatMovement>(FindObjectsSortMode.None);
@@ -210,6 +211,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP A: Zoom to boat ---
         UIManager.Instance?.ShowDialogue("Dòng chảy ký ức đánh thức những chuyến tàu...");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_2");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         // Calculate camera position dynamically relative to the boat's current position
         Vector3 currentBoatPos = boatObj != null ? boatObj.transform.position : new Vector3(15.57f, 0.8f, 21.8f);
@@ -221,6 +223,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP B: Zoom to redboat ---
         UIManager.Instance?.ShowDialogue("Sắc đỏ kiêu hãnh xuôi dòng nước lớn...");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_3");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         // Calculate camera position dynamically relative to redboat's current position
         Vector3 currentRedboatPos = redboatObj != null ? redboatObj.transform.position : new Vector3(-31.03f, 1.74f, 11.65f);
@@ -232,6 +235,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP C: Zoom to causaigon (Saigon Bridge) ---
         UIManager.Instance?.ShowDialogue("Cầu Sài Gòn nối nhịp những dòng sông...");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_4");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         Vector3 causaigonCamPos = new Vector3(10f, 6f, 5f);
         Quaternion causaigonCamRot = Quaternion.LookRotation(new Vector3(27.5f, 9.6f, 21.3f) - causaigonCamPos);
@@ -241,6 +245,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP D: Zoom to villa ---
         UIManager.Instance?.ShowDialogue("Những khu biệt thự cổ rạng rỡ bên sông...");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_5");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         Vector3 villaCamPos = new Vector3(-10f, 12f, 15f);
         Quaternion villaCamRot = Quaternion.LookRotation(new Vector3(-10f, 1.8f, 48f) - villaCamPos);
@@ -250,6 +255,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP E: Zoom to landmark (and restore the rest of the map!) ---
         UIManager.Instance?.ShowDialogue("Và Landmark 81 vút cao đón ánh nắng vàng...");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_6");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         Vector3 landmarkCamPos = new Vector3(0f, 6f, 5f);
         Quaternion landmarkCamRot = Quaternion.LookRotation(new Vector3(0f, 25f, 34f) - landmarkCamPos);
@@ -272,6 +278,7 @@ public class EndingSceneController : MonoBehaviour
 
         // --- STEP F: Zoom out back to Player ---
         UIManager.Instance?.ShowDialogue("Cả thành phố bừng sáng rực rỡ sắc màu.");
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_7");
         AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
         yield return StartCoroutine(LerpCamera(mainCam, startCamPos, startCamRot, 2.0f));
 
@@ -290,9 +297,11 @@ public class EndingSceneController : MonoBehaviour
 
         yield return new WaitForSeconds(1.0f);
         UIManager.Instance?.ShowDialogue("Khi ký ức được lắng nghe, thành phố lại tìm thấy màu sắc của mình.");
-        yield return new WaitForSeconds(3.2f);
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_8");
+        yield return new WaitForSeconds(5.0f);
         UIManager.Instance?.ShowDialogue("Tương lai không bắt đầu bằng việc quên đi quá khứ.\nTương lai bắt đầu khi ta biết mang ký ức đi cùng.");
-        yield return new WaitForSeconds(3.4f);
+        AudioManager.EnsureInstance()?.PlayVoice("Ending_9");
+        yield return new WaitForSeconds(6.8f);
         yield return StartCoroutine(ShowGameCompletedPanelRoutine());
     }
 

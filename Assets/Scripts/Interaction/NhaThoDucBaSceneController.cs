@@ -106,6 +106,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         if (memoryZone != null && memoryZone.IsRestored)
         {
             UIManager.Instance?.ShowDialogue("Quảng trường đã bình yên trở lại rồi.");
+            AudioManager.EnsureInstance().PlayVoice("DucBa_3");
             UIManager.Instance?.SetObjective(objectiveReturnBus);
             return;
         }
@@ -114,6 +115,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         {
             firstTalkDone = true;
             UIManager.Instance?.ShowDialogue(firstNpcDialogue);
+            AudioManager.EnsureInstance().PlayVoice("DucBa_1");
             UIManager.Instance?.SetObjective(objectiveFindBell);
             if (smallBellItem != null)
             {
@@ -126,6 +128,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         if (!bellCollected)
         {
             UIManager.Instance?.ShowDialogue("Hãy tìm chiếc chuông nhỏ quanh quảng trường.");
+            AudioManager.EnsureInstance().PlayVoice("DucBa_4");
             UIManager.Instance?.SetObjective(objectiveFindBell);
             return;
         }
@@ -134,6 +137,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         {
             secondTalkDone = true;
             UIManager.Instance?.ShowDialogue(secondNpcDialogue);
+            AudioManager.EnsureInstance().PlayVoice("DucBa_2");
             UIManager.Instance?.SetObjective(objectiveSolvePuzzle);
             if (bellPuzzle != null)
             {
@@ -144,6 +148,7 @@ public class NhaThoDucBaSceneController : MonoBehaviour
         }
 
         UIManager.Instance?.ShowDialogue("Hãy sắp xếp thứ tự các nốt chuông dựa trên quy tắc hòa âm.");
+        AudioManager.EnsureInstance().PlayVoice("DucBa_5");
         UIManager.Instance?.SetObjective(objectiveSolvePuzzle);
     }
 

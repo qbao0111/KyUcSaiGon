@@ -15,6 +15,7 @@ public class AudioManager : MonoBehaviour
     private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
     private AudioClipLibrary clipLibrary;
     private AudioSource sfxSource;
+    private AudioSource voiceSource;
     private AudioSource footstepSource;
     private AudioSource ambienceA;
     private AudioSource ambienceB;
@@ -83,6 +84,22 @@ public class AudioManager : MonoBehaviour
         }
 
         sfxSource.PlayOneShot(clip, volume);
+    }
+
+    public void PlayVoice(string clipName, float volume = 1f)
+    {
+        AudioClip clip = GetClip(clipName);
+        if (clip == null || voiceSource == null)
+        {
+            return;
+        }
+
+        // NPC lines should replace one another instead of talking over each other.
+        voiceSource.Stop();
+        voiceSource.clip = clip;
+        voiceSource.volume = Mathf.Clamp01(volume);
+        voiceSource.Play();
+        UIManager.Instance?.ExtendDialogueDuration(clip.length + 0.2f);
     }
 
     public void SetFootstepsMoving(bool moving)
@@ -265,6 +282,7 @@ public class AudioManager : MonoBehaviour
     private void CreateSources()
     {
         sfxSource = CreateSource("SFXSource", false);
+        voiceSource = CreateSource("NPCVoiceSource", false);
         footstepSource = CreateSource("FootstepLoopSource", true);
         ambienceA = CreateSource("AmbienceSourceA", true);
         ambienceB = CreateSource("AmbienceSourceB", true);
@@ -313,7 +331,29 @@ public class AudioManager : MonoBehaviour
             "SFX_CameraFocus",
             "SFX_LandmarkReveal",
             "SFX_MemoryAwakening",
-            "SFX_RestorationCinematicWave"
+            "SFX_RestorationCinematicWave",
+            "NguyenHue_1",
+            "NguyenHue_2",
+            "DucBa_1",
+            "DucBa_2",
+            "DucBa_3",
+            "DucBa_4",
+            "DucBa_5",
+            "NguyenHue_Restore_1",
+            "NguyenHue_Restore_2",
+            "NguyenHue_Restore_3",
+            "DucBa_Restore_1",
+            "DucBa_Restore_2",
+            "DucBa_Restore_3",
+            "Ending_1",
+            "Ending_2",
+            "Ending_3",
+            "Ending_4",
+            "Ending_5",
+            "Ending_6",
+            "Ending_7",
+            "Ending_8",
+            "Ending_9"
         };
 
         foreach (string clipName in knownClips)
@@ -410,7 +450,29 @@ public static class AudioLibraryAssetBuilder
             "SFX_CameraFocus",
             "SFX_LandmarkReveal",
             "SFX_MemoryAwakening",
-            "SFX_RestorationCinematicWave"
+            "SFX_RestorationCinematicWave",
+            "NguyenHue_1",
+            "NguyenHue_2",
+            "DucBa_1",
+            "DucBa_2",
+            "DucBa_3",
+            "DucBa_4",
+            "DucBa_5",
+            "NguyenHue_Restore_1",
+            "NguyenHue_Restore_2",
+            "NguyenHue_Restore_3",
+            "DucBa_Restore_1",
+            "DucBa_Restore_2",
+            "DucBa_Restore_3",
+            "Ending_1",
+            "Ending_2",
+            "Ending_3",
+            "Ending_4",
+            "Ending_5",
+            "Ending_6",
+            "Ending_7",
+            "Ending_8",
+            "Ending_9"
         };
 
         List<AudioClipLibraryEntry> entries = new List<AudioClipLibraryEntry>();

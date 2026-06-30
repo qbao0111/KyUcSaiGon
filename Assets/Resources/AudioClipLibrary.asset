@@ -55,3 +55,47 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 5ac5b6212ee4d41489319d6dbfb12307, type: 3}
   - name: SFX_RestorationCinematicWave
     clip: {fileID: 8300000, guid: 886b8fb3a15b3fd4da2faf003db106d7, type: 3}
+  - name: NguyenHue_1
+    clip: {fileID: 8300000, guid: b9c2217f5b1d4cb487db7d452494b7dd, type: 3}
+  - name: NguyenHue_2
+    clip: {fileID: 8300000, guid: 52f406830e564ef8a419c783c67a7e35, type: 3}
+  - name: DucBa_1
+    clip: {fileID: 8300000, guid: a555338e31a14bb8b3184fcd73bb651c, type: 3}
+  - name: DucBa_2
+    clip: {fileID: 8300000, guid: c9b8f5dd8360493789a65dd06d99f57d, type: 3}
+  - name: DucBa_3
+    clip: {fileID: 8300000, guid: 2da0913c913841fea645f48222e83279, type: 3}
+  - name: DucBa_4
+    clip: {fileID: 8300000, guid: e5835d8dc4b44362ab3f4313289a7a64, type: 3}
+  - name: DucBa_5
+    clip: {fileID: 8300000, guid: 71e6f5ffca20454382783acd3808ec22, type: 3}
+  - name: NguyenHue_Restore_1
+    clip: {fileID: 8300000, guid: a4d32a62be00d9e46a9dfcd9a1b1d94e, type: 3}
+  - name: NguyenHue_Restore_2
+    clip: {fileID: 8300000, guid: 2562aa64db9f59447a6fc5071e055e67, type: 3}
+  - name: NguyenHue_Restore_3
+    clip: {fileID: 8300000, guid: 813997e2766379b4ca6af3e9ce839d3d, type: 3}
+  - name: DucBa_Restore_1
+    clip: {fileID: 8300000, guid: 747e6a23410236b48bb3a5f167a147d2, type: 3}
+  - name: DucBa_Restore_2
+    clip: {fileID: 8300000, guid: 50e5d783fd349c545b3f75bff5617bb2, type: 3}
+  - name: DucBa_Restore_3
+    clip: {fileID: 8300000, guid: 5936f16a8220e404e91224188aa767b4, type: 3}
+  - name: Ending_1
+    clip: {fileID: 8300000, guid: f397bcc12f4161b4da7468c4a0846484, type: 3}
+  - name: Ending_2
+    clip: {fileID: 8300000, guid: 3f7a8f73cafaceb4da2dbe05039cd086, type: 3}
+  - name: Ending_3
+    clip: {fileID: 8300000, guid: aaaedeedb88e8ef429341354276c9e67, type: 3}
+  - name: Ending_4
+    clip: {fileID: 8300000, guid: 8be9de1a8d1574a4893b2088eec28567, type: 3}
+  - name: Ending_5
+    clip: {fileID: 8300000, guid: 6160bbdedae077d4fb28aeb1514de89d, type: 3}
+  - name: Ending_6
+    clip: {fileID: 8300000, guid: d97db0c03a3f03e4a9f43e48662c189c, type: 3}
+  - name: Ending_7
+    clip: {fileID: 8300000, guid: 0568869086bedce4fab8d128c9f37b0a, type: 3}
+  - name: Ending_8
+    clip: {fileID: 8300000, guid: f3181c3dc276475459d7556388c660d1, type: 3}
+  - name: Ending_9
+    clip: {fileID: 8300000, guid: 329bb6fb3a2c07b46ab9eb9b2e50aee4, type: 3}

@@ -37,15 +37,34 @@ public class NguyenHueRestorationController : MonoBehaviour
 
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private static readonly int ColorId = Shader.PropertyToID("_Color");
+    private static readonly int BaseColorFactorId = Shader.PropertyToID("baseColorFactor");
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+    private static readonly int EmissiveFactorId = Shader.PropertyToID("emissiveFactor");
 
     private readonly List<RendererMemory> cachedRenderers = new List<RendererMemory>();
     private Coroutine restoreRoutine;
 
+    // Groups for cinematic restoration wave
+    private readonly List<RendererMemory> npcGroup = new List<RendererMemory>();
+    private readonly List<RendererMemory> cathedralGroup = new List<RendererMemory>(); // Represents City Hall
+    private readonly List<RendererMemory> otherGroup = new List<RendererMemory>();
+
+    // Lighting variables for gloomy look
+    private Light sunLight;
+    private float originalSunIntensity = 1.0f;
+
     private void Awake()
     {
+        // Force the gloomy look parameters to match ending scene perfectly (0% saturation, 22% brightness, 85% tint)
+        graySaturation = 0.0f;
+        grayBrightness = 0.22f;
+        grayTintStrength = 0.85f;
+        grayMemoryTint = new Color(0.38f, 0.40f, 0.43f, 1f);
+
         ResolveReferences();
+        DisableConflictingEffects();
         CacheRenderers();
+        CategorizeGroups();
     }
 
     private void OnEnable()
@@ -109,71 +128,220 @@ public class NguyenHueRestorationController : MonoBehaviour
     private IEnumerator RestoreWaveRoutine()
     {
         State = RestorationState.Restoring;
-        AudioManager.EnsureInstance().PlaySfx("SFX_MemoryRestoreWave", 0.95f);
+
+        // 1. Disable Player movement and Camera tracking
+        ThirdPersonPlayerController playerController = FindFirstObjectByType<ThirdPersonPlayerController>();
+        ThirdPersonCamera playerCamera = FindFirstObjectByType<ThirdPersonCamera>();
+
+        if (playerController != null)
+        {
+            playerController.enabled = false;
+            AudioManager.EnsureInstance()?.SetFootstepsMoving(false);
+        }
+        if (playerCamera != null) playerCamera.enabled = false;
+
+        Camera mainCam = Camera.main;
+        Vector3 startCamPos = mainCam != null ? mainCam.transform.position : Vector3.zero;
+        Quaternion startCamRot = mainCam != null ? mainCam.transform.rotation : Quaternion.identity;
+
+        // Play memory awakening sound immediately upon interaction
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_MemoryAwakening", 1.0f);
+        AudioManager.EnsureInstance()?.StopAmbience(1.0f);
+
         SetBusStopVisible(false);
         UIManager.Instance?.SetObjective("Ký ức đang trở lại với phố đi bộ...");
 
-        float minDistance = float.MaxValue;
-        float maxDistance = 0f;
-        Vector3 origin = playerSpawn != null ? playerSpawn.position : transform.position;
+        yield return new WaitForSeconds(1.0f);
 
-        foreach (RendererMemory rendererMemory in cachedRenderers)
-        {
-            if (!rendererMemory.IsValid)
-            {
-                continue;
-            }
+        // Play the restoration cinematic wave sound throughout the zoom process
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_RestorationCinematicWave", 1.0f);
 
-            rendererMemory.distanceFromSpawn = Vector3.Distance(origin, rendererMemory.renderer.bounds.center);
-            minDistance = Mathf.Min(minDistance, rendererMemory.distanceFromSpawn);
-            maxDistance = Mathf.Max(maxDistance, rendererMemory.distanceFromSpawn);
-        }
+        // --- STEP A: Zoom to Fountain (Đài phun nước) ---
+        // Fountain position is at (0f, 0.55f, 10f)
+        Vector3 fountainPos = new Vector3(0f, 0.55f, 10f);
+        Vector3 fountainCamPos = new Vector3(0f, 4f, -2f);
+        Quaternion fountainCamRot = Quaternion.LookRotation(new Vector3(0f, 1f, 10f) - fountainCamPos);
 
-        if (minDistance == float.MaxValue)
-        {
-            minDistance = 0f;
-        }
+        UIManager.Instance?.ShowDialogue("Dòng nước mát lành đang quay lại với đài phun nước...");
+        AudioManager.EnsureInstance()?.PlayVoice("NguyenHue_Restore_1");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        yield return StartCoroutine(LerpCamera(mainCam, fountainCamPos, fountainCamRot, 1.5f));
+        yield return StartCoroutine(RestoreGroupRoutine(npcGroup, 1.8f));
+        yield return new WaitForSeconds(0.4f);
 
-        float travelDuration = Mathf.Max(0.1f, totalDuration - objectRestoreDuration);
+        // --- STEP B: Zoom Out to Wide Panorama (Toàn cảnh phố đi bộ) ---
+        Vector3 panoramaCamPos = new Vector3(0f, 20f, -40f);
+        Quaternion panoramaCamRot = Quaternion.LookRotation(new Vector3(0f, 8f, 5f) - panoramaCamPos);
 
-        foreach (RendererMemory rendererMemory in cachedRenderers)
-        {
-            if (!rendererMemory.IsValid)
-            {
-                continue;
-            }
+        UIManager.Instance?.ShowDialogue("Phố đi bộ bừng lên trong ánh đèn lung linh...");
+        AudioManager.EnsureInstance()?.PlayVoice("NguyenHue_Restore_2");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        yield return StartCoroutine(LerpCamera(mainCam, panoramaCamPos, panoramaCamRot, 1.8f));
+        yield return StartCoroutine(RestoreGroupRoutine(otherGroup, 2.2f));
+        yield return new WaitForSeconds(0.4f);
 
-            float distanceT = Mathf.InverseLerp(minDistance, maxDistance, rendererMemory.distanceFromSpawn);
-            float delay = distanceT * travelDuration;
-            delay += GetCategoryDelay(rendererMemory.path) * 0.55f;
-            StartCoroutine(RestoreRendererRoutine(rendererMemory, delay));
-        }
+        // --- STEP C: Zoom Out to City Hall Facade (Tương tự landmark zoom, majestic wide front-on shot) ---
+        // CityHall center is at (0, 0, 39) with size y = 42.9f.
+        // We place the camera at z = -10f (49 units back from City Hall facade), height y = 8f.
+        Vector3 cityHallCamPos = new Vector3(0f, 8f, -10f);
+        Quaternion cityHallCamRot = Quaternion.LookRotation(new Vector3(0f, 22f, 39f) - cityHallCamPos);
 
-        yield return new WaitForSeconds(totalDuration + 0.15f);
+        UIManager.Instance?.ShowDialogue("Tòa nhà Ủy ban rạng rỡ sắc vàng kiêu hãnh...");
+        AudioManager.EnsureInstance()?.PlayVoice("NguyenHue_Restore_3");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        yield return StartCoroutine(LerpCamera(mainCam, cityHallCamPos, cityHallCamRot, 2.0f));
+
+        // Play reveal SFX once camera has arrived at City Hall
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_LandmarkReveal", 1.0f);
+
+        // Restore lighting
+        RestoreLights();
+
+        // Restore City Hall in parallel
+        yield return StartCoroutine(RestoreGroupRoutine(cathedralGroup, 2.2f));
+        
+        // Admire the landmark
+        yield return new WaitForSeconds(2.0f);
+
+        // --- STEP D: Zoom out back to Player ---
+        UIManager.Instance?.ShowDialogue("Phố đi bộ đã có âm nhạc trở lại rồi.");
+        AudioManager.EnsureInstance()?.PlayVoice("NguyenHue_2");
+        AudioManager.EnsureInstance()?.PlaySfx("SFX_CameraFocus", 1.0f);
+        yield return StartCoroutine(LerpCamera(mainCam, startCamPos, startCamRot, 1.8f));
+
+        // Re-enable Player movement and Camera tracking
+        if (playerController != null) playerController.enabled = true;
+        if (playerCamera != null) playerCamera.enabled = true;
+
+        // Fade in the restored city ambient sound
+        AudioManager.EnsureInstance()?.FadeToRestoredAmbienceForCurrentScene();
 
         ApplyRestoredInstant();
         State = RestorationState.Restored;
         SetBusStopVisible(true);
-        UIManager.Instance?.ShowDialogue("Âm nhạc trở lại. Đài phun nước sáng lên. Phố đi bộ Nguyễn Huệ đã được khôi phục.");
+
         UIManager.Instance?.SetObjective("Ký ức đã trở lại. Hãy quay về xe buýt ký ức.");
+
         restoreRoutine = null;
     }
 
-    private IEnumerator RestoreRendererRoutine(RendererMemory rendererMemory, float delay)
+    private IEnumerator LerpCamera(Camera cam, Vector3 targetPos, Quaternion targetRot, float duration)
     {
-        yield return new WaitForSeconds(delay);
-
+        if (cam == null) yield break;
+        Vector3 startPos = cam.transform.position;
+        Quaternion startRot = cam.transform.rotation;
         float elapsed = 0f;
-        while (elapsed < objectRestoreDuration)
+        while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / objectRestoreDuration));
-            float pulse = Mathf.Sin(t * Mathf.PI);
-            rendererMemory.LerpToRestored(t, pulse, glowColor, glowIntensity);
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            cam.transform.position = Vector3.Lerp(startPos, targetPos, t);
+            cam.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
             yield return null;
         }
+        cam.transform.position = targetPos;
+        cam.transform.rotation = targetRot;
+    }
 
-        rendererMemory.ApplyRestored();
+    private IEnumerator RestoreGroupRoutine(List<RendererMemory> group, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            foreach (RendererMemory mem in group)
+            {
+                if (mem != null && mem.IsValid)
+                {
+                    mem.LerpToRestored(t, 0f, glowColor, 0f);
+                }
+            }
+            yield return null;
+        }
+        foreach (RendererMemory mem in group)
+        {
+            if (mem != null && mem.IsValid)
+            {
+                mem.ApplyRestored();
+            }
+        }
+    }
+
+    private void CategorizeGroups()
+    {
+        npcGroup.Clear();      // Step A: Fountain & Puzzle/LED group
+        cathedralGroup.Clear(); // Step C: City Hall group
+        otherGroup.Clear();     // Step B: Boulevard environment group
+
+        foreach (RendererMemory mem in cachedRenderers)
+        {
+            if (!mem.IsValid) continue;
+
+            string nameLower = mem.renderer.gameObject.name.ToLower();
+            string pathLower = mem.path.ToLower();
+
+            if (nameLower.Contains("cityhall") || nameLower.Contains("city_hall") || nameLower.Contains("backdrop") ||
+                pathLower.Contains("cityhall") || pathLower.Contains("city_hall") || pathLower.Contains("backdrop"))
+            {
+                cathedralGroup.Add(mem);
+            }
+            else if (nameLower.Contains("fountain") || nameLower.Contains("speaker") || nameLower.Contains("puzzle") || nameLower.Contains("led") ||
+                     pathLower.Contains("fountain") || pathLower.Contains("speaker") || pathLower.Contains("puzzle") || pathLower.Contains("led"))
+            {
+                npcGroup.Add(mem);
+            }
+            else
+            {
+                otherGroup.Add(mem);
+            }
+        }
+    }
+
+    private void CacheAndDimLights()
+    {
+        if (sunLight == null)
+        {
+            sunLight = GameObject.Find("Directional Light")?.GetComponent<Light>();
+            if (sunLight == null)
+            {
+                foreach (Light l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                {
+                    if (l.type == LightType.Directional)
+                    {
+                        sunLight = l;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (sunLight != null)
+        {
+            originalSunIntensity = sunLight.intensity;
+            sunLight.intensity = originalSunIntensity * 0.18f;
+        }
+    }
+
+    private void RestoreLights()
+    {
+        if (sunLight != null)
+        {
+            sunLight.intensity = originalSunIntensity;
+        }
+    }
+
+    private void DisableConflictingEffects()
+    {
+        MaterialRestoreEffect[] matEffects = FindObjectsByType<MaterialRestoreEffect>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (MaterialRestoreEffect effect in matEffects)
+        {
+            if (effect.gameObject.scene == gameObject.scene)
+            {
+                effect.enabled = false;
+                effect.renderers = new Renderer[0];
+            }
+        }
     }
 
     private void ApplyGrayMemoryInstant()
@@ -185,6 +353,7 @@ public class NguyenHueRestorationController : MonoBehaviour
         }
 
         SetBusStopVisible(false);
+        CacheAndDimLights();
     }
 
     private void ApplyRestoredInstant()
@@ -193,6 +362,7 @@ public class NguyenHueRestorationController : MonoBehaviour
         {
             rendererMemory.ApplyRestored();
         }
+        RestoreLights();
     }
 
     private void ResolveReferences()
@@ -282,16 +452,15 @@ public class NguyenHueRestorationController : MonoBehaviour
             || path.Contains("Direct_InvisibleBoundaryColliders")
             || path.Contains("COLLIDER_")
             || path.Contains("Boundary")
-            || path.Contains("Invisible");
+            || path.Contains("Invisible")
+            || path.Contains("REPLACE_NPC")
+            || path.Contains("StreetMusician")
+            || path.Contains("Musician");
     }
 
     private bool IsNpc(Transform target)
     {
-        string path = GetPath(target);
-        return path.Contains("REPLACE_NPC")
-            || path.Contains("StreetMusician")
-            || path.Contains("Musician")
-            || path.Contains("NPC_Area");
+        return false;
     }
 
     private float GetCategoryDelay(string path)
@@ -427,8 +596,24 @@ public class NguyenHueRestorationController : MonoBehaviour
             this.material = material;
             originalColor = GetMaterialColor(material);
             fadedColor = BuildFadedColor(originalColor, graySaturation, grayBrightness, grayTintStrength, grayMemoryTint, isNpc ? npcFadedAlpha : originalColor.a);
-            hadEmission = material.HasProperty(EmissionColorId);
-            originalEmission = hadEmission ? material.GetColor(EmissionColorId) : Color.black;
+            
+            bool hasEmissiveFactor = material.HasProperty(EmissiveFactorId);
+            bool hasEmissionColor = material.HasProperty(EmissionColorId);
+            hadEmission = hasEmissiveFactor || hasEmissionColor;
+            
+            if (hasEmissiveFactor)
+            {
+                originalEmission = material.GetColor(EmissiveFactorId);
+            }
+            else if (hasEmissionColor)
+            {
+                originalEmission = material.GetColor(EmissionColorId);
+            }
+            else
+            {
+                originalEmission = Color.black;
+            }
+
             shouldBeTransparentAtStart = isNpc;
             wasOpaque = originalColor.a >= 0.99f;
         }
@@ -480,12 +665,19 @@ public class NguyenHueRestorationController : MonoBehaviour
             }
 
             material.EnableKeyword("_EMISSION");
-            material.SetColor(EmissionColorId, color);
+            if (material.HasProperty(EmissionColorId))
+            {
+                material.SetColor(EmissionColorId, color);
+            }
+            if (material.HasProperty(EmissiveFactorId))
+            {
+                material.SetColor(EmissiveFactorId, color);
+            }
         }
 
         private static Color BuildFadedColor(Color original, float saturation, float brightness, float tintStrength, Color tint, float alpha)
         {
-            float luminance = original.r * 0.2126f + original.g * 0.7152f + original.b * 0.0722f;
+            float luminance = original.r * 0.299f + original.g * 0.587f + original.b * 0.114f;
             Color gray = new Color(luminance, luminance, luminance, alpha);
             Color muted = Color.Lerp(gray, original, saturation);
             muted.r *= brightness;
@@ -499,7 +691,7 @@ public class NguyenHueRestorationController : MonoBehaviour
 
     private static bool HasColorProperty(Material material)
     {
-        return material.HasProperty(BaseColorId) || material.HasProperty(ColorId);
+        return material.HasProperty(BaseColorId) || material.HasProperty(ColorId) || material.HasProperty(BaseColorFactorId);
     }
 
     private static Color GetMaterialColor(Material material)
@@ -509,7 +701,12 @@ public class NguyenHueRestorationController : MonoBehaviour
             return material.GetColor(BaseColorId);
         }
 
-        return material.GetColor(ColorId);
+        if (material.HasProperty(ColorId))
+        {
+            return material.GetColor(ColorId);
+        }
+
+        return material.GetColor(BaseColorFactorId);
     }
 
     private static void SetMaterialColor(Material material, Color color)
@@ -522,6 +719,11 @@ public class NguyenHueRestorationController : MonoBehaviour
         if (material.HasProperty(ColorId))
         {
             material.SetColor(ColorId, color);
+        }
+
+        if (material.HasProperty(BaseColorFactorId))
+        {
+            material.SetColor(BaseColorFactorId, color);
         }
     }
 

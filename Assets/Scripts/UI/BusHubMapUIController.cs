@@ -385,7 +385,40 @@ public class BusHubMapUIController : MonoBehaviour
     private GameObject CreateCompletedBadge(Transform parent)
     {
         Image badge = CreateImage(parent, "CompletedBadge", new Vector2(46f, 46f), new Vector2(186f, 58f), new Color(0.18f, 0.62f, 0.2f, 1f), CreateCircleSprite());
-        CreateText(badge.transform, "CheckText", "✓", Vector2.zero, new Vector2(42f, 42f), 28, Color.white, TextAlignmentOptions.Center);
+        
+        // Create custom checkmark graphics using UI Images to avoid missing font character bugs
+        GameObject checkmarkRoot = new GameObject("CheckmarkRoot", typeof(RectTransform));
+        checkmarkRoot.transform.SetParent(badge.transform, false);
+        RectTransform rtRoot = checkmarkRoot.GetComponent<RectTransform>();
+        rtRoot.anchoredPosition = new Vector2(0f, -1f);
+        rtRoot.sizeDelta = new Vector2(24f, 24f);
+
+        // Left short leg of the checkmark
+        GameObject leftLeg = new GameObject("LeftLeg", typeof(RectTransform), typeof(Image));
+        leftLeg.transform.SetParent(checkmarkRoot.transform, false);
+        RectTransform rtLeft = leftLeg.GetComponent<RectTransform>();
+        rtLeft.anchorMin = new Vector2(0.5f, 0.5f);
+        rtLeft.anchorMax = new Vector2(0.5f, 0.5f);
+        rtLeft.pivot = new Vector2(0.5f, 0.5f);
+        rtLeft.sizeDelta = new Vector2(4f, 10f);
+        rtLeft.anchoredPosition = new Vector2(-4f, -2f);
+        rtLeft.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        leftLeg.GetComponent<Image>().color = Color.white;
+        leftLeg.GetComponent<Image>().raycastTarget = false;
+
+        // Right long leg of the checkmark
+        GameObject rightLeg = new GameObject("RightLeg", typeof(RectTransform), typeof(Image));
+        rightLeg.transform.SetParent(checkmarkRoot.transform, false);
+        RectTransform rtRight = rightLeg.GetComponent<RectTransform>();
+        rtRight.anchorMin = new Vector2(0.5f, 0.5f);
+        rtRight.anchorMax = new Vector2(0.5f, 0.5f);
+        rtRight.pivot = new Vector2(0.5f, 0.5f);
+        rtRight.sizeDelta = new Vector2(4f, 18f);
+        rtRight.anchoredPosition = new Vector2(2f, 1f);
+        rtRight.localRotation = Quaternion.Euler(0f, 0f, -45f);
+        rightLeg.GetComponent<Image>().color = Color.white;
+        rightLeg.GetComponent<Image>().raycastTarget = false;
+
         badge.gameObject.SetActive(false);
         return badge.gameObject;
     }

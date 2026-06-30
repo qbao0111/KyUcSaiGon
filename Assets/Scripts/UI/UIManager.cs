@@ -179,6 +179,17 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    public void ExtendDialogueDuration(float seconds)
+    {
+        if (dialogueBox == null || !dialogueBox.activeSelf)
+        {
+            return;
+        }
+
+        CancelInvoke(nameof(HideDialogue));
+        Invoke(nameof(HideDialogue), Mathf.Max(0.1f, seconds));
+    }
+
     public void RefreshProgressText()
     {
         if (memoryProgressText == null)

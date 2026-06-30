@@ -84,6 +84,10 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
             {
                 runtimeScreenMaterial = screenRenderer.material;
             }
+            else if (screenRenderer.sharedMaterial != runtimeScreenMaterial)
+            {
+                screenRenderer.material = runtimeScreenMaterial;
+            }
             ApplyEmission(runtimeScreenMaterial, resolvedColor, Mathf.Lerp(screenEmissionIdle, screenEmissionPulse, pulse));
         }
     }
@@ -282,11 +286,6 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
 
         if (screenRenderer != null)
         {
-            if (screenMaterial != null && screenRenderer.sharedMaterial != screenMaterial)
-            {
-                screenRenderer.sharedMaterial = screenMaterial;
-            }
-
             Material material = null;
             if (Application.isPlaying)
             {
@@ -294,10 +293,18 @@ public class LEDHintInteractable : MonoBehaviour, IInteractable
                 {
                     runtimeScreenMaterial = screenRenderer.material;
                 }
+                else if (screenRenderer.sharedMaterial != runtimeScreenMaterial)
+                {
+                    screenRenderer.material = runtimeScreenMaterial;
+                }
                 material = runtimeScreenMaterial;
             }
             else
             {
+                if (screenMaterial != null && screenRenderer.sharedMaterial != screenMaterial)
+                {
+                    screenRenderer.sharedMaterial = screenMaterial;
+                }
                 material = screenRenderer.sharedMaterial;
             }
 

@@ -29,6 +29,7 @@ public class NguyenHueTutorialController : MonoBehaviour
         if (streetMusicianNpc != null)
         {
             streetMusicianNpc.tutorialController = this;
+            streetMusicianNpc.suppressDefaultDialogue = true;
         }
 
         if (memoryItem != null)
@@ -67,6 +68,7 @@ public class NguyenHueTutorialController : MonoBehaviour
         if (memoryZone != null && memoryZone.IsRestored)
         {
             UIManager.Instance?.ShowDialogue("Phố đi bộ đã có âm nhạc trở lại rồi.");
+            AudioManager.EnsureInstance().PlayVoice("NguyenHue_2");
             UIManager.Instance?.SetObjective(busStopObjective);
             return;
         }
@@ -74,6 +76,10 @@ public class NguyenHueTutorialController : MonoBehaviour
         if (!hasTalkedToNpc)
         {
             hasTalkedToNpc = true;
+            UIManager.Instance?.ShowDialogue(streetMusicianNpc != null
+                ? streetMusicianNpc.dialogue
+                : "Nhịp điệu bị nhiễu rồi. Hãy tìm ba màn hình LED quanh phố và chỉnh lại loa.");
+            AudioManager.EnsureInstance().PlayVoice("NguyenHue_1");
             SetLedHintsVisible(true);
 
             if (memoryItem != null)
@@ -107,6 +113,10 @@ public class NguyenHueTutorialController : MonoBehaviour
             return;
         }
 
+        UIManager.Instance?.ShowDialogue(streetMusicianNpc != null
+            ? streetMusicianNpc.dialogue
+            : "Nhịp điệu bị nhiễu rồi. Hãy tìm ba màn hình LED quanh phố và chỉnh lại loa.");
+        AudioManager.EnsureInstance().PlayVoice("NguyenHue_1");
         UIManager.Instance?.SetObjective(puzzleObjective);
     }
 
