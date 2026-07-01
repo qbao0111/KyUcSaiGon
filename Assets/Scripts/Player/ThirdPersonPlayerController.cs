@@ -35,7 +35,7 @@ public class ThirdPersonPlayerController : MonoBehaviour
     {
         if (UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput)
         {
-            AudioManager.EnsureInstance().SetFootstepsMoving(false);
+            StopMovementImmediately();
             return;
         }
 
@@ -80,5 +80,24 @@ public class ThirdPersonPlayerController : MonoBehaviour
         lastPlanarVelocity = velocity;
         velocity.y = verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    public void StopMovementImmediately()
+    {
+        lastPlanarVelocity = Vector3.zero;
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetFootstepsMoving(false);
+        }
+        PlayerMovementAnimator movementAnimator = GetComponent<PlayerMovementAnimator>();
+        if (movementAnimator != null)
+        {
+            movementAnimator.StopImmediately();
+        }
+    }
+
+    private void OnDisable()
+    {
+        StopMovementImmediately();
     }
 }

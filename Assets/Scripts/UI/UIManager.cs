@@ -219,6 +219,7 @@ public class UIManager : MonoBehaviour
         }
 
         puzzlePanel.SetActive(true);
+        StopPlayerMovementImmediately();
         ClearMixerPanel();
         ClearBellSequencePanel();
         bool useBellSequence = IsBellSequencePuzzle(puzzle);
@@ -361,11 +362,27 @@ public class UIManager : MonoBehaviour
         externalInputBlocked = blocked;
         if (blocked)
         {
+            StopPlayerMovementImmediately();
             CursorLockManager.UnlockForUI();
         }
         else
         {
             UnlockCursorIfNoPanel();
+        }
+    }
+
+    private static void StopPlayerMovementImmediately()
+    {
+        ThirdPersonPlayerController thirdPerson = FindFirstObjectByType<ThirdPersonPlayerController>();
+        if (thirdPerson != null)
+        {
+            thirdPerson.StopMovementImmediately();
+        }
+
+        SimpleFirstPersonController simple = FindFirstObjectByType<SimpleFirstPersonController>();
+        if (simple != null)
+        {
+            simple.StopMovementImmediately();
         }
     }
 

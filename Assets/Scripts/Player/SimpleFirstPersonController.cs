@@ -45,6 +45,7 @@ public class SimpleFirstPersonController : MonoBehaviour
     {
         if (UIManager.Instance != null && UIManager.Instance.IsBlockingPlayerInput)
         {
+            StopMovementImmediately();
             return;
         }
 
@@ -158,5 +159,19 @@ public class SimpleFirstPersonController : MonoBehaviour
             renderer.material.color = new Color(0.2f, 0.45f, 0.95f);
         }
 
+    }
+
+    public void StopMovementImmediately()
+    {
+        verticalVelocity = 0f;
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetFootstepsMoving(false);
+        }
+    }
+
+    private void OnDisable()
+    {
+        StopMovementImmediately();
     }
 }

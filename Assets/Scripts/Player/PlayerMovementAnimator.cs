@@ -74,6 +74,20 @@ public class PlayerMovementAnimator : MonoBehaviour
         visualRoot.localRotation = initialLocalRotation * lean;
     }
 
+    public void StopImmediately()
+    {
+        if (animator != null && hasSpeedParameter)
+        {
+            animator.SetFloat("Speed", 0f);
+        }
+
+        if (visualRoot != null)
+        {
+            visualRoot.localPosition = initialLocalPosition;
+            visualRoot.localRotation = initialLocalRotation;
+        }
+    }
+
     private void ApplyVisualScale()
     {
         if (visualRoot == null || targetVisualScale <= 0f)
