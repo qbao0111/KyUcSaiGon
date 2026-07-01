@@ -1,0 +1,18 @@
+[
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/Ending/villa.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/Ending/villa_LOD1.glb","ratio":0.15},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/Ending/villa.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/Ending/villa_LOD2.glb","ratio":0.04},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NguyenHue/StreetFurniture/nguyen_hue_street_tree.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/tree_LOD1.glb","ratio":0.25},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NguyenHue/StreetFurniture/nguyen_hue_street_tree.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/tree_LOD2.glb","ratio":0.06},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/NhaThoDucBa_StatueDucMe.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/statue_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/NhaThoDucBa_StatueDucMe.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/statue_LOD2.glb","ratio":0.10},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_01.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_01_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_02.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_02_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_03.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_03_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_04.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_04_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_05.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_05_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Car_06.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Car_06_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Motorbike_01.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Motorbike_01_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Motorbike_02.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Motorbike_02_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Motorbike_03.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Motorbike_03_LOD1.glb","ratio":0.35},
+  {"source":"D:/Game/KyUcSaiGon/Assets/Art/Models/NhaThoDucBa/Vehicals/NhaThoDucBa_Motorbike_04.glb","destination":"D:/Game/KyUcSaiGon/Assets/Art/Optimized/NhaThoDucBa/Motorbike_04_LOD1.glb","ratio":0.35}
+]
