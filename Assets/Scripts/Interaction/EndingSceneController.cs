@@ -465,7 +465,8 @@ public class EndingSceneController : MonoBehaviour
 
         Text text = textObject.GetComponent<Text>();
         text.text = label;
-        text.font = GameUIFont.Bold;
+        Font loraFont = Resources.Load<Font>("UI/Fonts/lora-v37-latin_vietnamese-700");
+        text.font = loraFont != null ? loraFont : GameUIFont.Bold;
         text.fontSize = 28;
         text.fontStyle = FontStyle.Bold;
         text.alignment = TextAnchor.MiddleLeft;
